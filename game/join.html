@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Join Game — dQuiz</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+  <style>
+    .join-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; position: relative; z-index: 1; }
+    .join-box { width: 100%; max-width: 440px; }
+    .code-input {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.2rem; font-weight: 800;
+      letter-spacing: 10px; text-align: center;
+      background: rgba(108,92,231,0.08);
+      border: 2px solid rgba(108,92,231,0.3);
+      color: var(--text);
+    }
+    .code-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(108,92,231,0.15); background: rgba(108,92,231,0.12); }
+    .code-input::placeholder { color: rgba(255,255,255,0.15); letter-spacing: 10px; }
+    .nickname-input { font-size: 1.1rem; font-weight: 600; text-align: center; }
+    #error-msg { display: none; }
+    .game-preview { display: none; }
+    .game-preview.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+
+  <div class="join-page">
+    <div class="join-box">
+      <div style="text-align:center;margin-bottom:32px">
+        <a href="/index.html" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;margin-bottom:20px">
+          <div style="width:44px;height:44px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px">⚡</div>
+          <span style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.6rem" class="gradient-text">dQuiz</span>
+        </a>
+        <h1 style="font-size:2rem;margin-bottom:8px">Join a game</h1>
+        <p style="color:var(--text-muted)">Enter the 6-digit code from your host</p>
+      </div>
+
+      <div class="card">
+        <div id="error-msg" class="alert alert-error mb-16"></div>
+
+        <form id="join-form" style="display:flex;flex-direction:column;gap:16px">
+          <div class="input-wrap">
+            <label class="input-label">Game Code</label>
+            <input
+              type="text" id="game-code" class="input-field code-input"
+              placeholder="000000" maxlength="6" inputmode="numeric"
+              pattern="[0-9]{6}" autocomplete="off"
+            />
+          </div>
+
+          <!-- Game preview -->
+          <div class="game-preview card" id="game-preview" style="background:rgba(0,184,148,0.08);border-color:rgba(0,184,148,0.3);padding:14px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="font-size:1.8rem" id="preview-emoji">🎮</div>
+              <div>
+                <div style="font-weight:700" id="preview-title">—</div>
+                <div style="font-size:0.8rem;color:var(--text-muted)" id="preview-meta">—</div>
+              </div>
+              <span class="badge badge-success" style="margin-left:auto">✓ Found</span>
+            </div>
+          </div>
+
+          <div class="input-wrap">
+            <label class="input-label">Your Nickname</label>
+            <input type="text" id="nickname" class="input-field nickname-input" placeholder="CoolPlayer" maxlength="20" required />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full btn-lg" id="btn-join" disabled>
+            Join Game →
+          </button>
+        </form>
+
+        <div style="text-align:center;margin-top:20px">
+          <a href="/dashboard.html" style="font-size:0.875rem;color:var(--text-muted);text-decoration:none">← Back to dashboard</a>
+        </div>
+      </div>
+
+      <!-- Or browse -->
+      <div style="text-align:center;margin-top:24px">
+        <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:12px">Don't have a code?</p>
+        <a href="/discover.html" class="btn btn-ghost">🔍 Browse Public Quizzes</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/assets/js/firebase-init.js';
+    import { toast } from '/assets/js/utils.js';
+    import {
+      collection, query, where, limit, getDocs,
+      doc, setDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const params = new URLSearchParams(location.search);
+    const preCode = params.get('code');
+    if (preCode) { document.getElementById('game-code').value = preCode; }
+
+    const codeEl = document.getElementById('game-code');
+    const nicknameEl = document.getElementById('nickname');
+    const joinBtn = document.getElementById('btn-join');
+    const errorMsg = document.getElementById('error-msg');
+    const preview = document.getElementById('game-preview');
+    let foundGame = null;
+
+    function showError(msg) { errorMsg.textContent = msg; errorMsg.style.display = 'flex'; }
+    function hideError() { errorMsg.style.display = 'none'; }
+
+    // Auto-fill nickname from auth
+    auth.onAuthStateChanged(u => {
+      if (u && u.displayName) nicknameEl.value = u.displayName;
+    });
+
+    // Live code lookup
+    let lookupTimeout;
+    codeEl.addEventListener('input', () => {
+      codeEl.value = codeEl.value.replace(/\D/g, '').slice(0,6);
+      hideError();
+      preview.classList.remove('show');
+      foundGame = null;
+      joinBtn.disabled = true;
+      if (codeEl.value.length === 6) {
+        clearTimeout(lookupTimeout);
+        lookupTimeout = setTimeout(lookupCode, 400);
+      }
+    });
+
+    async function lookupCode() {
+      const code = codeEl.value;
+      const q = query(collection(db, 'games'), where('gameCode','==',code), where('status','in',['waiting','question','results']), limit(1));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        showError('Game not found. Check the code and try again.');
+        return;
+      }
+      foundGame = { id: snap.docs[0].id, ...snap.docs[0].data() };
+      document.getElementById('preview-title').textContent = foundGame.quizTitle || 'Quiz';
+      document.getElementById('preview-meta').textContent = `Hosted by ${foundGame.hostName||'Host'} · ${foundGame.status==='waiting'?'Waiting to start':'In progress'}`;
+      preview.classList.add('show');
+      joinBtn.disabled = false;
+    }
+
+    if (preCode) lookupCode();
+
+    document.getElementById('join-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+      if (!foundGame) { showError('Please enter a valid 6-digit code.'); return; }
+      const nickname = nicknameEl.value.trim();
+      if (!nickname) { showError('Please enter a nickname.'); return; }
+
+      joinBtn.disabled = true; joinBtn.textContent = 'Joining…';
+
+      try {
+        // Use auth uid if logged in, else generate a guest id
+        let playerId;
+        const user = auth.currentUser;
+        if (user) {
+          playerId = user.uid;
+        } else {
+          playerId = 'guest_' + Math.random().toString(36).slice(2,10);
+        }
+
+        await setDoc(doc(db, 'games', foundGame.id, 'players', playerId), {
+          nickname, score: 0, streak: 0, correctAnswers: 0,
+          joinedAt: serverTimestamp(), connected: true,
+          answered: false, currentAnswer: null
+        });
+
+        // Store player identity in session
+        sessionStorage.setItem('dquiz_player_id', playerId);
+        sessionStorage.setItem('dquiz_nickname', nickname);
+
+        window.location.href = `/game/play.html?game=${foundGame.id}&player=${playerId}`;
+      } catch(err) {
+        showError(err.message);
+        joinBtn.disabled = false; joinBtn.textContent = 'Join Game →';
+      }
+    });
+  </script>
+</body>
+</html>

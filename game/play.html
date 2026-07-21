@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Playing — dQuiz</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+  <style>
+    body { overflow-x: hidden; }
+    .play-page { min-height: 100vh; display: flex; flex-direction: column; position: relative; z-index: 1; }
+    .play-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: rgba(8,8,26,0.8); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+    .score-display { font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 1.4rem; color: #A29BFE; }
+    .streak-badge { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; background: rgba(253,203,110,0.15); border: 1px solid rgba(253,203,110,0.3); color: #FDCB6E; font-weight: 700; font-size: 0.85rem; }
+    .play-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; max-width: 700px; margin: 0 auto; width: 100%; }
+    .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; margin-top: 24px; }
+    @media(max-width:520px) { .answers-grid { grid-template-columns: 1fr; } }
+    .result-panel { text-align: center; }
+    .result-icon { font-size: 5rem; margin-bottom: 16px; animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+    @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+    .points-gained { font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; font-weight: 800; }
+    .points-gained.correct { color: #00B894; }
+    .points-gained.wrong { color: var(--danger); }
+    .lb-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; background: rgba(255,255,255,0.03); margin-bottom: 6px; }
+    .waiting-state { text-align: center; }
+    .waiting-state .big-code { font-family: 'Space Grotesk',sans-serif; font-size: 3rem; font-weight: 800; letter-spacing: 8px; color: #A29BFE; }
+    .timer-ring-wrap { position: relative; width: 80px; height: 80px; margin: 0 auto; }
+    .timer-ring-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 1.4rem; }
+  </style>
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+
+  <div class="play-page">
+    <!-- Header -->
+    <div class="play-header">
+      <div>
+        <div style="font-size:0.8rem;color:var(--text-muted)" id="header-quiz">dQuiz</div>
+        <div style="font-size:0.9rem;font-weight:600" id="header-nickname">Player</div>
+      </div>
+      <div class="score-display" id="header-score">0</div>
+      <div class="streak-badge" id="streak-badge" style="display:none">🔥 <span id="streak-count">0</span></div>
+    </div>
+
+    <div class="play-body">
+
+      <!-- Waiting for game to start -->
+      <div id="state-waiting" class="waiting-state">
+        <div style="font-size:3rem;margin-bottom:20px">⏳</div>
+        <h2 style="font-size:1.6rem;margin-bottom:8px">You're in!</h2>
+        <p style="color:var(--text-muted);margin-bottom:24px">Waiting for the host to start the game…</p>
+        <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div style="margin-top:28px">
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:6px">Playing as</div>
+          <div id="waiting-nickname" style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.5rem;color:#A29BFE"></div>
+        </div>
+      </div>
+
+      <!-- Question -->
+      <div id="state-question" style="display:none;width:100%">
+        <!-- Timer + progress -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div style="font-size:0.85rem;color:var(--text-muted)">Q <span id="q-num">1</span> / <span id="q-total">?</span></div>
+          <div class="timer-ring-wrap">
+            <svg class="timer-svg" width="80" height="80" viewBox="0 0 80 80">
+              <circle class="timer-track" cx="40" cy="40" r="34"/>
+              <circle class="timer-fill" id="timer-circle" cx="40" cy="40" r="34" stroke-dasharray="213.6" stroke-dashoffset="0"/>
+            </svg>
+            <div class="timer-ring-num" id="timer-num">20</div>
+          </div>
+          <div style="font-size:0.85rem;color:var(--text-muted)"><span id="q-pts">200</span> pts</div>
+        </div>
+
+        <!-- Question text -->
+        <div class="card" style="text-align:center;margin-bottom:8px">
+          <img id="q-img" src="" alt="" style="display:none;width:100%;max-height:160px;object-fit:cover;border-radius:10px;margin-bottom:14px" />
+          <h2 id="q-text" style="font-size:1.3rem;line-height:1.4">Question text</h2>
+        </div>
+
+        <!-- Answers -->
+        <div class="answers-grid" id="answers-grid"></div>
+      </div>
+
+      <!-- Answer result -->
+      <div id="state-result" style="display:none;width:100%">
+        <div class="result-panel">
+          <div class="result-icon" id="result-icon">🎉</div>
+          <div class="points-gained" id="result-points">+0</div>
+          <div style="color:var(--text-muted);margin-top:8px;font-size:0.9rem" id="result-msg">Well done!</div>
+          <div style="margin-top:28px;font-size:0.85rem;color:var(--text-muted)">Waiting for next question…</div>
+          <div class="dots" style="justify-content:center;margin-top:10px"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        </div>
+      </div>
+
+      <!-- Leaderboard between rounds -->
+      <div id="state-results" style="display:none;width:100%">
+        <h2 style="text-align:center;margin-bottom:20px">🏆 Leaderboard</h2>
+        <div id="lb-list"></div>
+        <div style="text-align:center;margin-top:20px;color:var(--text-muted);font-size:0.875rem">Next question coming up…</div>
+      </div>
+
+      <!-- Finished -->
+      <div id="state-finished" style="display:none;text-align:center;width:100%">
+        <div style="font-size:4rem;margin-bottom:16px" id="finish-emoji">🎉</div>
+        <h1 style="font-size:2rem;margin-bottom:8px" id="finish-title">Game Over!</h1>
+        <div style="font-size:1.1rem;color:var(--text-muted);margin-bottom:8px" id="finish-rank"></div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:800;color:#A29BFE;margin-bottom:28px" id="finish-score"></div>
+        <div class="card" style="margin-bottom:24px" id="finish-stats"></div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <a href="/game/join.html" class="btn btn-primary">Play Again</a>
+          <a href="/dashboard.html" class="btn btn-ghost">Dashboard</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/assets/js/firebase-init.js';
+    import { toast } from '/assets/js/utils.js';
+    import {
+      doc, getDoc, onSnapshot, updateDoc, collection, getDocs, increment, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const params = new URLSearchParams(location.search);
+    const gameId = params.get('game');
+    const playerId = params.get('player') || sessionStorage.getItem('dquiz_player_id');
+    const nickname = sessionStorage.getItem('dquiz_nickname') || 'Player';
+
+    if (!gameId || !playerId) { window.location.href = '/game/join.html'; }
+
+    document.getElementById('header-nickname').textContent = nickname;
+    document.getElementById('waiting-nickname').textContent = nickname;
+
+    let questions = [];
+    let currentQ = null;
+    let answered = false;
+    let timerInterval = null;
+    let myScore = 0;
+    let myStreak = 0;
+    let questionStartTime = null;
+
+    // Load quiz questions once game doc is known
+    const gameSnap = await getDoc(doc(db, 'games', gameId));
+    if (!gameSnap.exists()) { window.location.href = '/game/join.html'; }
+    const gameData = gameSnap.data();
+    document.getElementById('header-quiz').textContent = gameData.quizTitle || 'dQuiz';
+
+    const qSnap = await getDocs(collection(db, 'quizSets', gameData.quizId, 'questions'));
+    questions = qSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    function setState(s) {
+      ['waiting','question','result','results','finished'].forEach(id => {
+        document.getElementById(`state-${id}`).style.display = id===s ? (s==='question'||s==='results'||s==='finished'?'block':'flex') : 'none';
+        if (id==='waiting' && s==='waiting') document.getElementById('state-waiting').style.display = 'block';
+      });
+      // fix flex vs block
+      if (s==='question') document.getElementById('state-question').style.display = 'block';
+      if (s==='result') document.getElementById('state-result').style.display = 'flex';
+    }
+    setState('waiting');
+
+    // Listen to game
+    onSnapshot(doc(db, 'games', gameId), async snap => {
+      if (!snap.exists()) return;
+      const game = snap.data();
+
+      if (game.status === 'waiting') { setState('waiting'); return; }
+
+      if (game.status === 'question') {
+        const qIdx = game.currentQuestion;
+        currentQ = questions[qIdx];
+        if (!currentQ) return;
+        answered = false;
+        questionStartTime = game.questionStartedAt?.toDate?.()?.getTime() || Date.now();
+        renderQuestion(qIdx, currentQ);
+        setState('question');
+        startTimer(currentQ.timeLimit || 20);
+        return;
+      }
+
+      if (game.status === 'results') {
+        clearInterval(timerInterval);
+        setState('results');
+        await loadLeaderboard();
+        return;
+      }
+
+      if (game.status === 'finished') {
+        clearInterval(timerInterval);
+        setState('finished');
+        await showFinished();
+        return;
+      }
+    });
+
+    function renderQuestion(idx, q) {
+      document.getElementById('q-num').textContent = idx + 1;
+      document.getElementById('q-total').textContent = questions.length;
+      document.getElementById('q-pts').textContent = q.points || 200;
+      document.getElementById('q-text').textContent = q.question;
+      const img = document.getElementById('q-img');
+      if (q.imageUrl) { img.src = q.imageUrl; img.style.display = 'block'; }
+      else { img.style.display = 'none'; }
+
+      const letters = ['A','B','C','D'];
+      const colors = ['#6C5CE7','#00D2FF','#00B894','#FDCB6E'];
+      document.getElementById('answers-grid').innerHTML = (q.answers||[]).map((a,i) => `
+        <button class="answer-btn" data-idx="${i}" style="border-color:${colors[i]}22;background:${colors[i]}11">
+          <div class="answer-letter" style="background:${colors[i]}33;color:${colors[i]}">${letters[i]}</div>
+          <span>${a}</span>
+        </button>
+      `).join('');
+
+      document.querySelectorAll('.answer-btn').forEach(btn => {
+        btn.addEventListener('click', () => submitAnswer(parseInt(btn.dataset.idx), q));
+      });
+    }
+
+    function startTimer(seconds) {
+      clearInterval(timerInterval);
+      let remaining = seconds;
+      const circ = document.getElementById('timer-circle');
+      const circumference = 213.6;
+      document.getElementById('timer-num').textContent = remaining;
+      circ.style.strokeDashoffset = 0;
+
+      timerInterval = setInterval(() => {
+        remaining--;
+        document.getElementById('timer-num').textContent = Math.max(0, remaining);
+        const pct = 1 - remaining / seconds;
+        circ.style.strokeDashoffset = pct * circumference;
+        if (remaining <= 5) circ.style.stroke = 'var(--danger)';
+        else circ.style.stroke = 'var(--accent)';
+        if (remaining <= 0) {
+          clearInterval(timerInterval);
+          if (!answered) autoSubmit();
+        }
+      }, 1000);
+    }
+
+    async function submitAnswer(ansIdx, q) {
+      if (answered) return;
+      answered = true;
+      clearInterval(timerInterval);
+
+      const elapsed = (Date.now() - questionStartTime) / 1000;
+      const isCorrect = ansIdx === q.correctAnswer;
+      const timeBonus = isCorrect ? Math.max(0, Math.floor((1 - elapsed / (q.timeLimit||20)) * 200)) : 0;
+      const streakBonus = isCorrect ? Math.min(myStreak * 50, 200) : 0;
+      const earned = isCorrect ? (q.points||200) + timeBonus + streakBonus : 0;
+      myStreak = isCorrect ? myStreak + 1 : 0;
+      myScore += earned;
+
+      // Highlight answers
+      document.querySelectorAll('.answer-btn').forEach((btn, i) => {
+        btn.disabled = true;
+        if (i === q.correctAnswer) btn.classList.add('correct');
+        else if (i === ansIdx && !isCorrect) btn.classList.add('wrong');
+        else btn.style.opacity = '0.4';
+      });
+
+      // Update Firestore
+      await updateDoc(doc(db, 'games', gameId, 'players', playerId), {
+        answered: true, currentAnswer: ansIdx,
+        score: increment(earned), streak: myStreak,
+        correctAnswers: isCorrect ? increment(1) : increment(0)
+      });
+
+      // Show result
+      document.getElementById('header-score').textContent = myScore.toLocaleString();
+      const sb = document.getElementById('streak-badge');
+      if (myStreak >= 2) { sb.style.display = 'flex'; document.getElementById('streak-count').textContent = myStreak; }
+      else { sb.style.display = 'none'; }
+
+      setTimeout(() => {
+        document.getElementById('result-icon').textContent = isCorrect ? (myStreak >= 3 ? '🔥' : '✅') : '❌';
+        document.getElementById('result-points').textContent = isCorrect ? `+${earned}` : '0';
+        document.getElementById('result-points').className = `points-gained ${isCorrect?'correct':'wrong'}`;
+        document.getElementById('result-msg').textContent = isCorrect
+          ? (myStreak >= 3 ? `${myStreak}x Streak! 🔥` : timeBonus > 100 ? 'Speed bonus! ⚡' : 'Correct!')
+          : `Correct answer: ${['A','B','C','D'][q.correctAnswer]}`;
+        setState('result');
+      }, 1200);
+    }
+
+    async function autoSubmit() {
+      if (answered) return;
+      answered = true;
+      await updateDoc(doc(db, 'games', gameId, 'players', playerId), {
+        answered: true, currentAnswer: null,
+        streak: 0
+      });
+      myStreak = 0;
+      document.getElementById('result-icon').textContent = '⏰';
+      document.getElementById('result-points').textContent = '0';
+      document.getElementById('result-points').className = 'points-gained wrong';
+      document.getElementById('result-msg').textContent = "Time's up!";
+      setState('result');
+    }
+
+    async function loadLeaderboard() {
+      const snap = await getDocs(collection(db, 'games', gameId, 'players'));
+      const players = snap.docs.map(d => d.data()).sort((a,b) => (b.score||0)-(a.score||0));
+      const myPos = players.findIndex(p => p.nickname === nickname) + 1;
+      document.getElementById('lb-list').innerHTML = players.slice(0,8).map((p,i) => {
+        const isMe = p.nickname === nickname;
+        return `<div class="lb-item" style="${isMe?'background:rgba(108,92,231,0.15);border:1px solid var(--border)':''}">
+          <div style="font-weight:800;font-size:1rem;min-width:24px;color:${i===0?'#FDCB6E':i===1?'#A0AEC0':i===2?'#C9874A':'var(--text-muted)'}">${i+1}</div>
+          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem">${(p.nickname||'?')[0].toUpperCase()}</div>
+          <div style="flex:1;font-weight:600;font-size:0.9rem">${p.nickname}${isMe?' (you)':''}</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:800;color:#A29BFE">${(p.score||0).toLocaleString()}</div>
+        </div>`;
+      }).join('');
+    }
+
+    async function showFinished() {
+      const snap = await getDocs(collection(db, 'games', gameId, 'players'));
+      const players = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.score||0)-(a.score||0));
+      const myPos = players.findIndex(p => p.id === playerId) + 1;
+      const myData = players.find(p => p.id === playerId) || {};
+
+      const rankEmojis = ['🥇','🥈','🥉'];
+      document.getElementById('finish-emoji').textContent = myPos <= 3 ? rankEmojis[myPos-1] : '🎮';
+      document.getElementById('finish-title').textContent = myPos === 1 ? 'You Won! 🎉' : myPos <= 3 ? 'Podium Finish!' : 'Game Over!';
+      document.getElementById('finish-rank').textContent = `Rank #${myPos} of ${players.length}`;
+      document.getElementById('finish-score').textContent = `${(myData.score||0).toLocaleString()} pts`;
+      document.getElementById('finish-stats').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;text-align:center">
+          <div><div style="font-size:1.5rem;font-weight:800;color:#00B894">${myData.correctAnswers||0}</div><div style="font-size:0.75rem;color:var(--text-muted)">Correct</div></div>
+          <div><div style="font-size:1.5rem;font-weight:800;color:#FDCB6E">${myData.streak||0}</div><div style="font-size:0.75rem;color:var(--text-muted)">Best Streak</div></div>
+          <div><div style="font-size:1.5rem;font-weight:800;color:#A29BFE">#${myPos}</div><div style="font-size:0.75rem;color:var(--text-muted)">Rank</div></div>
+        </div>
+      `;
+
+      // Award XP to logged in players
+      const user = auth.currentUser;
+      if (user) {
+        const xpEarned = 50 + (myPos === 1 ? 200 : myPos <= 3 ? 100 : 25);
+        await updateDoc(doc(db, 'users', user.uid), {
+          gamesPlayed: increment(1),
+          xp: increment(xpEarned),
+          wins: myPos === 1 ? increment(1) : increment(0),
+        }).catch(()=>{});
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Host Game — dQuiz</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+  <style>
+    .host-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
+    .code-panel { text-align: center; }
+    .code-label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+    .players-grid { display: flex; flex-wrap: wrap; gap: 10px; min-height: 120px; align-content: flex-start; }
+    .player-count-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; background: rgba(0,184,148,0.15); border: 1px solid rgba(0,184,148,0.3); color: #00B894; font-size: 0.85rem; font-weight: 600; }
+    .q-progress { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .host-btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .answer-stat-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; margin-top: 4px; }
+    .answer-stat-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.5s ease; }
+    @media(max-width:900px) { .host-layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+  <div id="navbar" class="navbar"></div>
+  <div class="page-content">
+    <div class="container section">
+
+      <!-- Waiting lobby -->
+      <div id="state-lobby">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+          <div>
+            <h1 style="font-size:1.8rem;margin-bottom:4px" id="quiz-title-display">Loading…</h1>
+            <div class="player-count-badge">👥 <span id="player-count">0</span> players joined</div>
+          </div>
+          <div style="display:flex;gap:10px">
+            <a href="/quiz/my-quizzes.html" class="btn btn-ghost">← Exit</a>
+            <button class="btn btn-primary btn-lg" id="btn-start" disabled>▶ Start Game</button>
+          </div>
+        </div>
+
+        <div class="host-layout">
+          <div class="card">
+            <div class="code-panel" style="margin-bottom:28px">
+              <div class="code-label">Game Code — share with players</div>
+              <div class="game-code-display" id="game-code">——————</div>
+              <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+                <button class="btn btn-secondary btn-sm" id="btn-copy-code">📋 Copy Code</button>
+                <a id="join-link" href="#" class="btn btn-ghost btn-sm" target="_blank">🔗 Join Link</a>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <h3 style="font-size:1rem">Players in lobby</h3>
+              <span class="badge badge-success" id="player-badge">0 / ∞</span>
+            </div>
+            <div class="players-grid" id="players-grid">
+              <p style="color:var(--text-muted);font-size:0.875rem">Waiting for players to join…</p>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <h3 style="font-size:1rem;margin-bottom:14px">📋 Quiz Info</h3>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text-muted)">Questions</span><span id="info-q-count" class="font-bold">—</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text-muted)">Visibility</span><span id="info-vis" class="font-bold">—</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.875rem"><span style="color:var(--text-muted)">Game ID</span><span id="info-game-id" class="font-bold text-xs" style="font-family:monospace">—</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1rem;margin-bottom:10px">⚙️ Game Tips</h3>
+              <ul style="display:flex;flex-direction:column;gap:8px;padding-left:16px">
+                <li style="font-size:0.8rem;color:var(--text-muted)">Players go to <strong style="color:var(--text)">dquiz.app/game/join</strong> and enter the code</li>
+                <li style="font-size:0.8rem;color:var(--text-muted)">Start once everyone has joined</li>
+                <li style="font-size:0.8rem;color:var(--text-muted)">You control the pace — advance questions manually</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active game panel -->
+      <div id="state-active" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px">
+          <h1 style="font-size:1.6rem" id="active-title">Game in Progress</h1>
+          <div class="host-btn-row">
+            <button class="btn btn-ghost" id="btn-show-results">📊 Show Results</button>
+            <button class="btn btn-primary" id="btn-next-q">Next Question →</button>
+            <button class="btn btn-danger" id="btn-end-game">⏹ End Game</button>
+          </div>
+        </div>
+
+        <div class="host-layout">
+          <div>
+            <!-- Question display -->
+            <div class="card" style="margin-bottom:16px">
+              <div class="q-progress">
+                <span style="font-size:0.85rem;color:var(--text-muted)">Question <span id="cur-q-num">1</span> of <span id="total-q-num">?</span></span>
+                <div id="timer-display" style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.5rem;color:var(--accent)">—</div>
+              </div>
+              <div class="progress-steps" id="q-steps" style="margin-bottom:20px"></div>
+              <h2 style="font-size:1.4rem;margin-bottom:16px" id="cur-q-text">Loading question…</h2>
+              <img id="cur-q-img" src="" alt="" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-bottom:16px" />
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="answer-display"></div>
+            </div>
+
+            <!-- Answer stats -->
+            <div class="card" id="answer-stats-card">
+              <h3 style="font-size:0.95rem;margin-bottom:14px">📊 Live Answer Stats</h3>
+              <div id="answer-stats"></div>
+              <div style="margin-top:12px;font-size:0.85rem;color:var(--text-muted)">
+                <span id="answered-count">0</span> / <span id="total-players">0</span> players answered
+              </div>
+            </div>
+          </div>
+
+          <!-- Live leaderboard -->
+          <div class="card">
+            <h3 style="font-size:1rem;margin-bottom:14px">🏆 Live Leaderboard</h3>
+            <div id="live-lb"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Finished -->
+      <div id="state-finished" style="display:none;text-align:center;padding:60px 24px">
+        <div style="font-size:4rem;margin-bottom:16px">🎉</div>
+        <h1 style="font-size:2.5rem;margin-bottom:8px">Game Over!</h1>
+        <p style="color:var(--text-muted);margin-bottom:32px">Thanks for playing. Here are the final results.</p>
+        <div id="podium" style="display:flex;justify-content:center;align-items:flex-end;gap:16px;margin-bottom:40px"></div>
+        <div class="card" style="max-width:500px;margin:0 auto 24px" id="final-lb"></div>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <a href="/quiz/my-quizzes.html" class="btn btn-ghost">← My Quizzes</a>
+          <a href="/dashboard.html" class="btn btn-primary">🏠 Dashboard</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/assets/js/firebase-init.js';
+    import { requireAuth, initNavbar, toast, plural } from '/assets/js/utils.js';
+    import {
+      doc, getDoc, addDoc, updateDoc, collection, onSnapshot, getDocs, serverTimestamp, increment
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    initNavbar(auth, db, '');
+    const user = await requireAuth(auth);
+
+    const params = new URLSearchParams(location.search);
+    const quizId = params.get('quiz');
+    if (!quizId) { window.location.href = '/quiz/my-quizzes.html'; }
+
+    let gameId = null;
+    let questions = [];
+    let players = [];
+    let timerInterval = null;
+    let gameUnsubscribe = null;
+    let playersUnsubscribe = null;
+
+    // Load quiz
+    const quizSnap = await getDoc(doc(db, 'quizSets', quizId));
+    if (!quizSnap.exists()) { toast('Quiz not found', 'error'); }
+    const quiz = quizSnap.data();
+    document.getElementById('quiz-title-display').textContent = quiz.title;
+    document.getElementById('active-title').textContent = quiz.title;
+    document.getElementById('info-q-count').textContent = quiz.questionCount || 0;
+    document.getElementById('info-vis').textContent = quiz.visibility;
+
+    const qSnap = await getDocs(collection(db, 'quizSets', quizId, 'questions'));
+    questions = qSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!questions.length) { toast('Add questions before hosting!', 'error'); }
+
+    // Create game
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const gameRef = await addDoc(collection(db, 'games'), {
+      gameCode: code, hostId: user.uid,
+      hostName: user.displayName || 'Host',
+      quizId, quizTitle: quiz.title,
+      status: 'waiting', currentQuestion: 0,
+      totalQuestions: questions.length,
+      startedAt: null, endedAt: null, questionStartedAt: null,
+      createdAt: serverTimestamp()
+    });
+    gameId = gameRef.id;
+    document.getElementById('game-code').textContent = code;
+    document.getElementById('info-game-id').textContent = gameId.slice(0,8) + '…';
+    const joinURL = `${location.origin}/game/join.html?code=${code}`;
+    document.getElementById('join-link').href = joinURL;
+
+    document.getElementById('btn-copy-code').addEventListener('click', () => {
+      navigator.clipboard.writeText(code).then(() => toast('Code copied!', 'success'));
+    });
+
+    // Listen to players
+    playersUnsubscribe = onSnapshot(collection(db, 'games', gameId, 'players'), snap => {
+      players = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const count = players.length;
+      document.getElementById('player-count').textContent = count;
+      document.getElementById('player-badge').textContent = `${count} / ∞`;
+      document.getElementById('btn-start').disabled = count === 0;
+      // Render chips
+      const grid = document.getElementById('players-grid');
+      if (!count) {
+        grid.innerHTML = '<p style="color:var(--text-muted);font-size:0.875rem">Waiting for players to join…</p>';
+      } else {
+        grid.innerHTML = players.map(p => `
+          <div class="player-chip">
+            <div class="navbar-avatar" style="width:28px;height:28px;font-size:0.75rem">${(p.nickname||'?')[0].toUpperCase()}</div>
+            <span style="font-size:0.85rem;font-weight:600">${p.nickname}</span>
+          </div>
+        `).join('');
+      }
+      updateLiveLB();
+      updateAnswerStats();
+    });
+
+    // Listen to game state
+    gameUnsubscribe = onSnapshot(doc(db, 'games', gameId), snap => {
+      if (!snap.exists()) return;
+      const game = snap.data();
+      if (game.status === 'finished') showFinished();
+    });
+
+    // Start game
+    document.getElementById('btn-start').addEventListener('click', async () => {
+      await updateDoc(doc(db, 'games', gameId), {
+        status: 'question', currentQuestion: 0,
+        startedAt: serverTimestamp(), questionStartedAt: serverTimestamp()
+      });
+      showActiveState(0);
+    });
+
+    function showActiveState(qIdx) {
+      document.getElementById('state-lobby').style.display = 'none';
+      document.getElementById('state-active').style.display = 'block';
+      renderQuestion(qIdx);
+      startTimer(questions[qIdx]?.timeLimit || 20);
+      // Reset answered flags
+      players.forEach(async p => {
+        await updateDoc(doc(db, 'games', gameId, 'players', p.id), { answered: false, currentAnswer: null });
+      });
+    }
+
+    function renderQuestion(idx) {
+      const q = questions[idx];
+      if (!q) return;
+      document.getElementById('cur-q-num').textContent = idx + 1;
+      document.getElementById('total-q-num').textContent = questions.length;
+      document.getElementById('cur-q-text').textContent = q.question;
+      const img = document.getElementById('cur-q-img');
+      if (q.imageUrl) { img.src = q.imageUrl; img.style.display = 'block'; }
+      else { img.style.display = 'none'; }
+      const letters = ['A','B','C','D'];
+      document.getElementById('answer-display').innerHTML = (q.answers||[]).map((a,i) => `
+        <div style="padding:12px 16px;border-radius:10px;border:2px solid ${i===q.correctAnswer?'var(--success)':'var(--border)'};background:${i===q.correctAnswer?'rgba(0,184,148,0.12)':'rgba(255,255,255,0.04)'}">
+          <span style="font-weight:700;margin-right:8px;color:${i===q.correctAnswer?'var(--success)':'var(--text-muted)'}">${letters[i]}</span>${a}
+          ${i===q.correctAnswer?'<span style="float:right">✓</span>':''}
+        </div>
+      `).join('');
+      const steps = document.getElementById('q-steps');
+      steps.innerHTML = questions.map((_,i) => `<div class="progress-step ${i<idx?'done':i===idx?'current':''}"></div>`).join('');
+      updateAnswerStats();
+    }
+
+    function startTimer(seconds) {
+      clearInterval(timerInterval);
+      let remaining = seconds;
+      document.getElementById('timer-display').textContent = remaining;
+      timerInterval = setInterval(() => {
+        remaining--;
+        document.getElementById('timer-display').textContent = remaining;
+        if (remaining <= 5) document.getElementById('timer-display').style.color = 'var(--danger)';
+        else document.getElementById('timer-display').style.color = 'var(--accent)';
+        if (remaining <= 0) clearInterval(timerInterval);
+      }, 1000);
+    }
+
+    function updateAnswerStats() {
+      const gameSnap_cur = parseInt(document.getElementById('cur-q-num')?.textContent||'1') - 1;
+      const q = questions[gameSnap_cur];
+      if (!q) return;
+      const letters = ['A','B','C','D'];
+      const counts = [0,0,0,0];
+      let answered = 0;
+      players.forEach(p => { if (p.answered && p.currentAnswer !== undefined && p.currentAnswer !== null) { counts[p.currentAnswer]++; answered++; } });
+      document.getElementById('answered-count').textContent = answered;
+      document.getElementById('total-players').textContent = players.length;
+      document.getElementById('answer-stats').innerHTML = (q.answers||[]).map((a,i) => `
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px">
+            <span><strong>${letters[i]}</strong> ${a}</span>
+            <span style="color:var(--text-muted)">${counts[i]}</span>
+          </div>
+          <div class="answer-stat-bar"><div class="answer-stat-fill" style="width:${players.length?Math.round(counts[i]/players.length*100):0}%;background:${i===q.correctAnswer?'var(--success)':'var(--primary)'}"></div></div>
+        </div>
+      `).join('');
+    }
+
+    function updateLiveLB() {
+      const sorted = [...players].sort((a,b) => (b.score||0)-(a.score||0)).slice(0,8);
+      document.getElementById('live-lb').innerHTML = sorted.map((p,i) => `
+        <div class="lb-row">
+          <div class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</div>
+          <div class="lb-avatar">${(p.nickname||'?')[0].toUpperCase()}</div>
+          <div class="lb-name">${p.nickname}</div>
+          <div class="lb-score" style="color:#A29BFE">${(p.score||0).toLocaleString()}</div>
+        </div>
+      `).join('') || '<p style="color:var(--text-muted);font-size:0.875rem">No players yet</p>';
+    }
+
+    document.getElementById('btn-show-results').addEventListener('click', async () => {
+      clearInterval(timerInterval);
+      await updateDoc(doc(db, 'games', gameId), { status: 'results' });
+    });
+
+    document.getElementById('btn-next-q').addEventListener('click', async () => {
+      const idx = parseInt(document.getElementById('cur-q-num').textContent) - 1;
+      const next = idx + 1;
+      if (next >= questions.length) {
+        await updateDoc(doc(db, 'games', gameId), { status: 'finished', endedAt: serverTimestamp() });
+        showFinished();
+      } else {
+        await updateDoc(doc(db, 'games', gameId), { status: 'question', currentQuestion: next, questionStartedAt: serverTimestamp() });
+        showActiveState(next);
+      }
+    });
+
+    document.getElementById('btn-end-game').addEventListener('click', async () => {
+      if (!confirm('End the game for all players?')) return;
+      await updateDoc(doc(db, 'games', gameId), { status: 'finished', endedAt: serverTimestamp() });
+      showFinished();
+    });
+
+    function showFinished() {
+      clearInterval(timerInterval);
+      document.getElementById('state-lobby').style.display = 'none';
+      document.getElementById('state-active').style.display = 'none';
+      document.getElementById('state-finished').style.display = 'block';
+      const sorted = [...players].sort((a,b) => (b.score||0)-(a.score||0));
+
+      // Podium
+      const top3 = sorted.slice(0,3);
+      const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean);
+      const heights = [120,160,90];
+      const labels = ['🥈','🥇','🥉'];
+      const podiumEl = document.getElementById('podium');
+      podiumEl.innerHTML = podiumOrder.map((p,i) => {
+        const realIdx = podiumOrder.indexOf(p) === 1 ? 0 : podiumOrder.indexOf(p) === 0 ? 1 : 2;
+        const h = i===1?160:i===0?120:90;
+        const label = i===1?'🥇':i===0?'🥈':'🥉';
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+          <div style="font-size:1.2rem;font-weight:800">${(p.nickname||'?')[0].toUpperCase()}</div>
+          <div style="font-size:0.8rem;font-weight:600">${p.nickname}</div>
+          <div style="font-size:0.75rem;color:#A29BFE">${(p.score||0).toLocaleString()} pts</div>
+          <div class="podium-bar podium-${i===1?1:i===0?2:3}" style="width:80px;height:${h}px;display:flex;align-items:center;justify-content:center;font-size:2rem">${label}</div>
+        </div>`;
+      }).join('');
+
+      // Final leaderboard
+      document.getElementById('final-lb').innerHTML = `
+        <h3 style="font-size:1rem;margin-bottom:14px">Final Rankings</h3>
+        ${sorted.map((p,i) => `
+          <div class="lb-row">
+            <div class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</div>
+            <div class="lb-avatar">${(p.nickname||'?')[0].toUpperCase()}</div>
+            <div><div class="lb-name">${p.nickname}</div><div class="lb-sub">${p.correctAnswers||0} correct · streak ${p.streak||0}</div></div>
+            <div class="lb-score" style="color:#A29BFE">${(p.score||0).toLocaleString()}</div>
+          </div>
+        `).join('')}
+      `;
+
+      // Award XP to host
+      updateDoc(doc(db, 'users', user.uid), { gamesHosted: increment(1), xp: increment(100) }).catch(()=>{});
+    }
+  </script>
+</body>
+</html>
