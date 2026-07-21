@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — dQuiz</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+  <style>
+    .admin-layout { display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start; }
+    .admin-nav { display: flex; flex-direction: column; gap: 4px; }
+    .admin-nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; font-size: 0.875rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; font-family: 'Inter', sans-serif; }
+    .admin-nav-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+    .admin-nav-item.active { background: rgba(108,92,231,0.15); color: #A29BFE; }
+    .admin-panel { display: none; }
+    .admin-panel.active { display: block; }
+    .stat-banner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+    .search-bar-admin { position: relative; margin-bottom: 16px; }
+    .search-bar-admin input { padding-left: 40px; }
+    .search-bar-admin .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+    .action-cell { display: flex; gap: 6px; }
+    .danger-zone { background: rgba(255,71,87,0.06); border: 1px solid rgba(255,71,87,0.2); border-radius: var(--radius); padding: 24px; margin-top: 24px; }
+    @media(max-width:768px) { .admin-layout { grid-template-columns: 1fr; } .stat-banner { grid-template-columns: repeat(2,1fr); } }
+  </style>
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+  <div id="navbar" class="navbar"></div>
+  <div class="page-content">
+    <div class="container section">
+
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px">
+        <div style="width:44px;height:44px;background:linear-gradient(135deg,#FF4757,#FF2336);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem">🛡</div>
+        <div>
+          <h1 style="font-size:1.8rem;margin-bottom:2px">Admin Panel</h1>
+          <p style="color:var(--text-muted);font-size:0.875rem">Manage users, quizzes, and platform settings</p>
+        </div>
+      </div>
+
+      <!-- Stats banner -->
+      <div class="stat-banner">
+        <div class="stat-chip"><div class="stat-value" style="color:#A29BFE" id="admin-stat-users">—</div><div class="stat-label">Total Users</div></div>
+        <div class="stat-chip"><div class="stat-value" style="color:#00D2FF" id="admin-stat-quizzes">—</div><div class="stat-label">Total Quizzes</div></div>
+        <div class="stat-chip"><div class="stat-value" style="color:#00B894" id="admin-stat-public">—</div><div class="stat-label">Public Quizzes</div></div>
+        <div class="stat-chip"><div class="stat-value" style="color:#FDCB6E" id="admin-stat-games">—</div><div class="stat-label">Games Today</div></div>
+      </div>
+
+      <div class="admin-layout">
+        <!-- Sidebar nav -->
+        <div>
+          <div class="card" style="padding:12px">
+            <div class="admin-nav">
+              <button class="admin-nav-item active" data-panel="users">👥 Users</button>
+              <button class="admin-nav-item" data-panel="quizzes">📝 Quizzes</button>
+              <button class="admin-nav-item" data-panel="games">🎮 Live Games</button>
+              <button class="admin-nav-item" data-panel="settings">⚙️ Settings</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panels -->
+        <div>
+
+          <!-- Users panel -->
+          <div class="admin-panel active" id="panel-users">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <h2 style="font-size:1.1rem">All Users</h2>
+            </div>
+            <div class="search-bar-admin">
+              <span class="icon">🔍</span>
+              <input type="text" id="user-search" class="input-field" placeholder="Search by username or email…" />
+            </div>
+            <div class="card" style="padding:0;overflow:hidden">
+              <table class="data-table" id="users-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Email</th>
+                    <th>Level / XP</th>
+                    <th>Games</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="users-tbody">
+                  <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Loading users…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Quizzes panel -->
+          <div class="admin-panel" id="panel-quizzes">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <h2 style="font-size:1.1rem">All Quizzes</h2>
+            </div>
+            <div class="search-bar-admin">
+              <span class="icon">🔍</span>
+              <input type="text" id="quiz-search" class="input-field" placeholder="Search by title or creator…" />
+            </div>
+            <div class="card" style="padding:0;overflow:hidden">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Creator</th>
+                    <th>Questions</th>
+                    <th>Plays</th>
+                    <th>Visibility</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="quizzes-tbody">
+                  <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Loading quizzes…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Live games panel -->
+          <div class="admin-panel" id="panel-games">
+            <h2 style="font-size:1.1rem;margin-bottom:16px">Live Games</h2>
+            <div class="card" style="padding:0;overflow:hidden">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Game Code</th>
+                    <th>Quiz</th>
+                    <th>Host</th>
+                    <th>Status</th>
+                    <th>Question</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="games-tbody">
+                  <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted)">Loading games…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Settings panel -->
+          <div class="admin-panel" id="panel-settings">
+            <h2 style="font-size:1.1rem;margin-bottom:20px">Platform Settings</h2>
+            <div class="card" style="margin-bottom:16px">
+              <h3 style="font-size:0.95rem;margin-bottom:14px">Firestore Security Rules</h3>
+              <pre style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:0.78rem;overflow-x:auto;color:#A29BFE;line-height:1.6">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() { return request.auth != null; }
+    function isOwner(uid) { return request.auth.uid == uid; }
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Users
+    match /users/{uid} {
+      allow read: if isAuth();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /achievements/{aid} {
+        allow read: if isAuth();
+        allow write: if isOwner(uid) || isAdmin();
+      }
+      match /activity/{aid} {
+        allow read: if isOwner(uid);
+        allow write: if isOwner(uid);
+      }
+    }
+
+    // Quizzes
+    match /quizSets/{quizId} {
+      allow read: if resource.data.visibility == 'public' || isAuth();
+      allow create: if isAuth();
+      allow update, delete: if isAuth() &&
+        (resource.data.creatorId == request.auth.uid || isAdmin());
+
+      match /questions/{qid} {
+        allow read: if isAuth();
+        allow write: if isAuth() &&
+          get(/databases/$(database)/documents/quizSets/$(quizId)).data.creatorId
+            == request.auth.uid;
+      }
+    }
+
+    // Games
+    match /games/{gameId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth() &&
+        (resource.data.hostId == request.auth.uid || isAdmin());
+
+      match /players/{playerId} {
+        allow read: if isAuth();
+        allow create: if isAuth();
+        // Players can only update their own answered/score fields
+        allow update: if request.auth.uid == playerId ||
+          get(/databases/$(database)/documents/games/$(gameId)).data.hostId
+            == request.auth.uid;
+      }
+    }
+  }
+}</pre>
+              <button class="btn btn-secondary btn-sm" id="btn-copy-rules" style="margin-top:12px">📋 Copy Rules</button>
+            </div>
+
+            <div class="danger-zone">
+              <h3 style="font-size:0.95rem;color:var(--danger);margin-bottom:8px">⚠️ Danger Zone</h3>
+              <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:16px">These actions are irreversible. Use with caution.</p>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn btn-danger btn-sm" id="btn-flush-games">🗑 Delete Finished Games</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/assets/js/firebase-init.js';
+    import { requireAuth, initNavbar, toast } from '/assets/js/utils.js';
+    import {
+      collection, getDocs, query, orderBy, limit, where,
+      deleteDoc, doc, updateDoc, getDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    initNavbar(auth, db, '');
+    const user = await requireAuth(auth);
+
+    // Check admin role
+    const meSnap = await getDoc(doc(db, 'users', user.uid));
+    if (!meSnap.exists() || meSnap.data().role !== 'admin') {
+      document.querySelector('.container').innerHTML = `
+        <div style="text-align:center;padding:80px 24px">
+          <div style="font-size:3rem;margin-bottom:16px">🚫</div>
+          <h2 style="margin-bottom:8px">Access Denied</h2>
+          <p style="color:var(--text-muted);margin-bottom:20px">You need admin privileges to view this page.</p>
+          <a href="/dashboard.html" class="btn btn-primary">← Dashboard</a>
+        </div>`;
+      return;
+    }
+
+    // Panel switching
+    document.querySelectorAll('.admin-nav-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.admin-nav-item').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`panel-${btn.dataset.panel}`).classList.add('active');
+        if (btn.dataset.panel === 'games') loadGames();
+      });
+    });
+
+    // Load users
+    let allUsers = [];
+    async function loadUsers() {
+      const snap = await getDocs(query(collection(db, 'users'), orderBy('xp', 'desc'), limit(200)));
+      allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      document.getElementById('admin-stat-users').textContent = allUsers.length;
+      renderUsers();
+    }
+
+    function renderUsers(filter = '') {
+      const filtered = filter
+        ? allUsers.filter(u => u.username?.toLowerCase().includes(filter) || u.email?.toLowerCase().includes(filter))
+        : allUsers;
+      document.getElementById('users-tbody').innerHTML = filtered.map(u => `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0">
+                ${(u.username||'?')[0].toUpperCase()}
+              </div>
+              <span style="font-weight:600">${u.username || '—'}</span>
+            </div>
+          </td>
+          <td style="color:var(--text-muted);font-size:0.85rem">${u.email || '—'}</td>
+          <td>Lv ${u.level||1} · ${(u.xp||0).toLocaleString()} XP</td>
+          <td>${u.gamesPlayed||0} played</td>
+          <td><span class="badge ${u.role==='admin'?'badge-primary':u.role==='banned'?'badge-danger':'badge-muted'}">${u.role||'user'}</span></td>
+          <td>
+            <div class="action-cell">
+              ${u.role !== 'admin' ? `<button class="btn btn-sm btn-ghost" data-action="make-admin" data-id="${u.id}">👑 Admin</button>` : ''}
+              ${u.role !== 'banned' ? `<button class="btn btn-sm btn-danger" data-action="ban" data-id="${u.id}">🚫 Ban</button>` : `<button class="btn btn-sm btn-ghost" data-action="unban" data-id="${u.id}">✓ Unban</button>`}
+            </div>
+          </td>
+        </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">No users found</td></tr>';
+
+      document.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const { action, id } = btn.dataset;
+          if (action === 'ban') {
+            if (!confirm('Ban this user?')) return;
+            await updateDoc(doc(db, 'users', id), { role: 'banned' });
+            toast('User banned', 'success');
+            await loadUsers();
+          }
+          if (action === 'unban') {
+            await updateDoc(doc(db, 'users', id), { role: 'user' });
+            toast('User unbanned', 'success');
+            await loadUsers();
+          }
+          if (action === 'make-admin') {
+            if (!confirm('Make this user an admin?')) return;
+            await updateDoc(doc(db, 'users', id), { role: 'admin' });
+            toast('User promoted to admin', 'success');
+            await loadUsers();
+          }
+          if (action === 'delete-quiz') {
+            if (!confirm('Delete this quiz permanently?')) return;
+            await deleteDoc(doc(db, 'quizSets', id));
+            toast('Quiz deleted', 'success');
+            await loadQuizzes();
+          }
+        });
+      });
+    }
+
+    document.getElementById('user-search').addEventListener('input', e => renderUsers(e.target.value.toLowerCase()));
+
+    // Load quizzes
+    let allQuizzes = [];
+    async function loadQuizzes() {
+      const snap = await getDocs(query(collection(db, 'quizSets'), orderBy('plays', 'desc'), limit(200)));
+      allQuizzes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const pubCount = allQuizzes.filter(q => q.visibility === 'public').length;
+      document.getElementById('admin-stat-quizzes').textContent = allQuizzes.length;
+      document.getElementById('admin-stat-public').textContent = pubCount;
+      renderQuizzes();
+    }
+
+    function renderQuizzes(filter = '') {
+      const filtered = filter
+        ? allQuizzes.filter(q => q.title?.toLowerCase().includes(filter) || q.creatorName?.toLowerCase().includes(filter))
+        : allQuizzes;
+      document.getElementById('quizzes-tbody').innerHTML = filtered.map(q => `
+        <tr>
+          <td><span style="font-weight:600">${q.emoji||'📝'} ${q.title||'—'}</span></td>
+          <td style="color:var(--text-muted)">${q.creatorName||'—'}</td>
+          <td>${q.questionCount||0}</td>
+          <td>${(q.plays||0).toLocaleString()}</td>
+          <td><span class="badge ${q.visibility==='public'?'badge-success':'badge-muted'}">${q.visibility||'private'}</span></td>
+          <td>
+            <div class="action-cell">
+              <a href="/quiz/edit.html?id=${q.id}" class="btn btn-sm btn-ghost">✏️</a>
+              <button class="btn btn-sm btn-danger" data-action="delete-quiz" data-id="${q.id}">🗑</button>
+            </div>
+          </td>
+        </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">No quizzes found</td></tr>';
+
+      document.querySelectorAll('[data-action="delete-quiz"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete this quiz permanently?')) return;
+          await deleteDoc(doc(db, 'quizSets', btn.dataset.id));
+          toast('Quiz deleted', 'success');
+          await loadQuizzes();
+        });
+      });
+    }
+
+    document.getElementById('quiz-search').addEventListener('input', e => renderQuizzes(e.target.value.toLowerCase()));
+
+    // Load games
+    async function loadGames() {
+      const snap = await getDocs(query(collection(db, 'games'), orderBy('createdAt', 'desc'), limit(50)));
+      const games = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      document.getElementById('admin-stat-games').textContent = games.filter(g => {
+        const d = g.createdAt?.toDate?.();
+        return d && (Date.now() - d.getTime()) < 86400000;
+      }).length;
+      document.getElementById('games-tbody').innerHTML = games.map(g => `
+        <tr>
+          <td><span style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:2px;color:#A29BFE">${g.gameCode||'—'}</span></td>
+          <td>${g.quizTitle||'—'}</td>
+          <td>${g.hostName||'—'}</td>
+          <td><span class="badge ${g.status==='waiting'?'badge-warning':g.status==='finished'?'badge-muted':'badge-success'}">${g.status||'—'}</span></td>
+          <td>${g.status!=='waiting'?`Q${(g.currentQuestion||0)+1}/${g.totalQuestions||'?'}`:'—'}</td>
+          <td>
+            <button class="btn btn-sm btn-danger" data-action="end-game" data-id="${g.id}">⏹ End</button>
+          </td>
+        </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">No games found</td></tr>';
+
+      document.querySelectorAll('[data-action="end-game"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Force end this game?')) return;
+          await updateDoc(doc(db, 'games', btn.dataset.id), { status: 'finished' });
+          toast('Game ended', 'success');
+          await loadGames();
+        });
+      });
+    }
+
+    // Copy rules
+    document.getElementById('btn-copy-rules').addEventListener('click', () => {
+      const pre = document.querySelector('pre');
+      navigator.clipboard.writeText(pre.textContent).then(() => toast('Rules copied!', 'success'));
+    });
+
+    // Flush finished games
+    document.getElementById('btn-flush-games').addEventListener('click', async () => {
+      if (!confirm('Delete all finished games? This cannot be undone.')) return;
+      const snap = await getDocs(query(collection(db, 'games'), where('status', '==', 'finished')));
+      let count = 0;
+      for (const d of snap.docs) { await deleteDoc(d.ref); count++; }
+      toast(`Deleted ${count} finished games`, 'success');
+    });
+
+    await loadUsers();
+    await loadQuizzes();
+  </script>
+</body>
+</html>
