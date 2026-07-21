@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Quiz — dQuiz</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+  <style>
+    .editor-layout { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+    .q-list { display: flex; flex-direction: column; gap: 12px; }
+    .q-item { background: var(--bg-card2); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: all 0.15s; }
+    .q-item:hover, .q-item.active { border-color: var(--primary); background: rgba(108,92,231,0.08); }
+    .q-num { width: 32px; height: 32px; border-radius: 8px; background: rgba(108,92,231,0.2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color: #A29BFE; flex-shrink: 0; }
+    .q-preview { flex: 1; min-width: 0; }
+    .q-preview-text { font-size: 0.875rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+    .q-preview-meta { font-size: 0.75rem; color: var(--text-muted); }
+    .answer-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .answer-input-wrap { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; border: 2px solid var(--border-subtle); background: rgba(255,255,255,0.03); transition: border-color 0.15s; }
+    .answer-input-wrap.correct { border-color: var(--success); background: rgba(0,184,148,0.08); }
+    .answer-letter-badge { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0; }
+    .correct-badge.correct { background: var(--success); color: white; }
+    .answer-input-wrap input { flex: 1; background: none; border: none; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.875rem; outline: none; }
+    .answer-input-wrap input::placeholder { color: var(--text-muted); }
+    .correct-radio { display: none; }
+    .settings-grid { display: flex; flex-direction: column; gap: 14px; }
+    .emoji-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+    .emoji-btn { width: 36px; height: 36px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+    .emoji-btn:hover, .emoji-btn.selected { background: rgba(108,92,231,0.2); border-color: var(--primary); }
+    .add-q-btn { width: 100%; padding: 16px; border-radius: 12px; border: 2px dashed rgba(108,92,231,0.3); background: rgba(108,92,231,0.05); color: #A29BFE; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .add-q-btn:hover { border-color: var(--primary); background: rgba(108,92,231,0.12); }
+    .save-status { font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+    @media(max-width:900px) { .editor-layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+  <div id="navbar" class="navbar"></div>
+  <div class="page-content">
+    <div class="container section">
+      <!-- Top bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+        <div>
+          <h1 style="font-size:1.8rem;margin-bottom:4px" id="page-title">Create Quiz</h1>
+          <div class="save-status" id="save-status">Unsaved changes</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <a href="/quiz/my-quizzes.html" class="btn btn-ghost">← Back</a>
+          <button class="btn btn-secondary" id="btn-preview" style="display:none">▶ Preview</button>
+          <button class="btn btn-primary" id="btn-save">💾 Save Quiz</button>
+        </div>
+      </div>
+
+      <div class="editor-layout">
+        <!-- Questions column -->
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <h2 style="font-size:1.1rem;margin-bottom:16px">Questions <span id="q-count" style="color:var(--text-muted);font-weight:400;font-size:0.9rem">(0)</span></h2>
+            <div class="q-list" id="q-list"></div>
+            <button class="add-q-btn" id="btn-add-q" style="margin-top:12px">＋ Add Question</button>
+          </div>
+
+          <!-- Question editor -->
+          <div class="card" id="q-editor" style="display:none">
+            <h3 style="font-size:1rem;margin-bottom:16px">✏️ Edit Question <span id="editing-num" style="color:var(--text-muted)"></span></h3>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div class="input-wrap">
+                <label class="input-label">Question Text</label>
+                <textarea id="q-text" class="input-field" rows="3" placeholder="What is the capital of France?" style="resize:vertical"></textarea>
+              </div>
+              <div class="input-wrap">
+                <label class="input-label">Image URL (optional)</label>
+                <input type="url" id="q-image" class="input-field" placeholder="https://example.com/image.jpg" />
+              </div>
+              <div id="q-image-preview" style="display:none">
+                <img id="q-img-el" style="width:100%;height:140px;object-fit:cover;border-radius:10px;border:1px solid var(--border)" />
+              </div>
+              <div>
+                <label class="input-label" style="display:block;margin-bottom:10px">Answers — click the letter to mark correct</label>
+                <div class="answer-inputs" id="answer-inputs"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="input-wrap">
+                  <label class="input-label">Time Limit (seconds)</label>
+                  <select id="q-time" class="input-field">
+                    <option value="10">10s</option><option value="20" selected>20s</option><option value="30">30s</option><option value="45">45s</option><option value="60">60s</option>
+                  </select>
+                </div>
+                <div class="input-wrap">
+                  <label class="input-label">Points</label>
+                  <select id="q-points" class="input-field">
+                    <option value="100">100</option><option value="200" selected>200</option><option value="500">500</option><option value="1000">1000</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button class="btn btn-danger btn-sm" id="btn-delete-q">🗑 Delete</button>
+                <button class="btn btn-success btn-sm" id="btn-save-q">✓ Save Question</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings column -->
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <div class="card">
+            <h2 style="font-size:1.1rem;margin-bottom:16px">Quiz Settings</h2>
+            <div class="settings-grid">
+              <div class="input-wrap">
+                <label class="input-label">Quiz Title *</label>
+                <input type="text" id="quiz-title" class="input-field" placeholder="My Awesome Quiz" maxlength="60" />
+              </div>
+              <div class="input-wrap">
+                <label class="input-label">Description</label>
+                <textarea id="quiz-desc" class="input-field" rows="3" placeholder="What's this quiz about?" style="resize:vertical" maxlength="200"></textarea>
+              </div>
+              <div class="input-wrap">
+                <label class="input-label">Cover Emoji</label>
+                <div class="emoji-picker" id="emoji-picker">
+                  ${['📝','🧠','🎮','🔬','🌍','📚','🎨','🏆','⚽','🎵','🍕','🚀','🦁','🌙','❓'].map(e=>`<button class="emoji-btn" data-emoji="${e}">${e}</button>`).join('')}
+                </div>
+              </div>
+              <div class="input-wrap">
+                <label class="input-label">Visibility</label>
+                <select id="quiz-visibility" class="input-field">
+                  <option value="private">🔒 Private</option>
+                  <option value="public">🌐 Public</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" id="host-card" style="display:none;background:linear-gradient(135deg,rgba(108,92,231,0.15),rgba(0,210,255,0.08));border-color:rgba(108,92,231,0.4)">
+            <h3 style="font-size:1rem;margin-bottom:8px">Ready to play?</h3>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:14px">You have <span id="q-ready-count">0</span> questions saved.</p>
+            <a href="#" id="btn-host" class="btn btn-primary btn-full">▶ Host This Quiz</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/assets/js/firebase-init.js';
+    import { requireAuth, initNavbar, toast } from '/assets/js/utils.js';
+    import { doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, getDocs, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    initNavbar(auth, db, 'quizzes');
+    const user = await requireAuth(auth);
+
+    const params = new URLSearchParams(location.search);
+    let quizId = params.get('id');
+    let questions = [];
+    let currentQIdx = null;
+    let selectedEmoji = '📝';
+    let correctAnswer = 0;
+
+    // Load existing quiz
+    if (quizId) {
+      document.getElementById('page-title').textContent = 'Edit Quiz';
+      const snap = await getDoc(doc(db, 'quizSets', quizId));
+      if (snap.exists()) {
+        const d = snap.data();
+        document.getElementById('quiz-title').value = d.title || '';
+        document.getElementById('quiz-desc').value = d.description || '';
+        document.getElementById('quiz-visibility').value = d.visibility || 'private';
+        selectedEmoji = d.emoji || '📝';
+        setEmoji(selectedEmoji);
+      }
+      const qSnap = await getDocs(collection(db, 'quizSets', quizId, 'questions'));
+      questions = qSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderQuestions();
+    }
+
+    function setEmoji(e) {
+      selectedEmoji = e;
+      document.querySelectorAll('.emoji-btn').forEach(b => b.classList.toggle('selected', b.dataset.emoji === e));
+    }
+    document.querySelectorAll('.emoji-btn').forEach(b => b.addEventListener('click', () => setEmoji(b.dataset.emoji)));
+    setEmoji(selectedEmoji);
+
+    function renderQuestions() {
+      const list = document.getElementById('q-list');
+      document.getElementById('q-count').textContent = `(${questions.length})`;
+      document.getElementById('q-ready-count').textContent = questions.length;
+      document.getElementById('host-card').style.display = questions.length > 0 && quizId ? 'block' : 'none';
+      document.getElementById('btn-host').href = `/game/host.html?quiz=${quizId}`;
+
+      if (!questions.length) {
+        list.innerHTML = '<p style="color:var(--text-muted);font-size:0.875rem;padding:8px 0">No questions yet. Add your first one!</p>';
+        return;
+      }
+      list.innerHTML = questions.map((q, i) => `
+        <div class="q-item ${currentQIdx===i?'active':''}" data-idx="${i}">
+          <div class="q-num">${i+1}</div>
+          <div class="q-preview">
+            <div class="q-preview-text">${q.question || 'Untitled question'}</div>
+            <div class="q-preview-meta">${q.answers?.length||0} answers · ${q.timeLimit||20}s · ${q.points||200}pts</div>
+          </div>
+          <span style="font-size:0.75rem;color:var(--text-muted)">✏️</span>
+        </div>
+      `).join('');
+      list.querySelectorAll('.q-item').forEach(el => {
+        el.addEventListener('click', () => openEditor(parseInt(el.dataset.idx)));
+      });
+    }
+
+    function buildAnswerInputs() {
+      const letters = ['A','B','C','D'];
+      const q = currentQIdx !== null ? questions[currentQIdx] : null;
+      const answers = q?.answers || ['','','',''];
+      correctAnswer = q?.correctAnswer ?? 0;
+      document.getElementById('answer-inputs').innerHTML = letters.map((l,i) => `
+        <div class="answer-input-wrap ${i===correctAnswer?'correct':''}" id="wrap-${i}">
+          <div class="answer-letter-badge correct-badge ${i===correctAnswer?'correct':''}" id="badge-${i}" data-idx="${i}" style="cursor:pointer" title="Mark as correct">${l}</div>
+          <input type="text" value="${answers[i]||''}" placeholder="Answer ${l}" id="ans-${i}" />
+        </div>
+      `).join('');
+      letters.forEach((_,i) => {
+        document.getElementById(`badge-${i}`).addEventListener('click', () => {
+          correctAnswer = i;
+          letters.forEach((_,j) => {
+            document.getElementById(`wrap-${j}`).classList.toggle('correct', j===i);
+            document.getElementById(`badge-${j}`).classList.toggle('correct', j===i);
+          });
+        });
+      });
+    }
+
+    function openEditor(idx) {
+      currentQIdx = idx;
+      const q = questions[idx];
+      document.getElementById('q-editor').style.display = 'block';
+      document.getElementById('editing-num').textContent = `#${idx+1}`;
+      document.getElementById('q-text').value = q.question || '';
+      document.getElementById('q-image').value = q.imageUrl || '';
+      document.getElementById('q-time').value = q.timeLimit || 20;
+      document.getElementById('q-points').value = q.points || 200;
+      buildAnswerInputs();
+      updateImagePreview(q.imageUrl);
+      renderQuestions();
+      document.getElementById('q-editor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function updateImagePreview(url) {
+      const wrap = document.getElementById('q-image-preview');
+      const img = document.getElementById('q-img-el');
+      if (url) { img.src = url; wrap.style.display = 'block'; }
+      else { wrap.style.display = 'none'; }
+    }
+    document.getElementById('q-image').addEventListener('input', e => updateImagePreview(e.target.value));
+
+    document.getElementById('btn-add-q').addEventListener('click', () => {
+      questions.push({ question: '', answers: ['','','',''], correctAnswer: 0, timeLimit: 20, points: 200, imageUrl: '' });
+      currentQIdx = questions.length - 1;
+      renderQuestions();
+      openEditor(currentQIdx);
+    });
+
+    document.getElementById('btn-save-q').addEventListener('click', () => {
+      if (currentQIdx === null) return;
+      const text = document.getElementById('q-text').value.trim();
+      if (!text) { toast('Please enter a question', 'error'); return; }
+      const answers = ['A','B','C','D'].map((_,i) => document.getElementById(`ans-${i}`).value.trim());
+      if (answers.filter(Boolean).length < 2) { toast('Add at least 2 answers', 'error'); return; }
+      questions[currentQIdx] = {
+        ...questions[currentQIdx],
+        question: text,
+        answers,
+        correctAnswer,
+        imageUrl: document.getElementById('q-image').value.trim(),
+        timeLimit: parseInt(document.getElementById('q-time').value),
+        points: parseInt(document.getElementById('q-points').value),
+      };
+      toast('Question saved ✓', 'success');
+      renderQuestions();
+    });
+
+    document.getElementById('btn-delete-q').addEventListener('click', () => {
+      if (currentQIdx === null) return;
+      if (!confirm('Delete this question?')) return;
+      questions.splice(currentQIdx, 1);
+      currentQIdx = null;
+      document.getElementById('q-editor').style.display = 'none';
+      renderQuestions();
+    });
+
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      const title = document.getElementById('quiz-title').value.trim();
+      if (!title) { toast('Please enter a quiz title', 'error'); return; }
+      const btn = document.getElementById('btn-save');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      const data = {
+        title,
+        description: document.getElementById('quiz-desc').value.trim(),
+        visibility: document.getElementById('quiz-visibility').value,
+        emoji: selectedEmoji,
+        creatorId: user.uid,
+        creatorName: user.displayName || 'Player',
+        updatedAt: serverTimestamp(),
+        questionCount: questions.length,
+        plays: 0, likes: 0,
+      };
+      try {
+        if (!quizId) {
+          data.createdAt = serverTimestamp();
+          const ref = await addDoc(collection(db, 'quizSets'), data);
+          quizId = ref.id;
+          history.replaceState({}, '', `/quiz/edit.html?id=${quizId}`);
+          document.getElementById('page-title').textContent = 'Edit Quiz';
+        } else {
+          await updateDoc(doc(db, 'quizSets', quizId), data);
+        }
+        // Save questions
+        const existing = await getDocs(collection(db, 'quizSets', quizId, 'questions'));
+        for (const d of existing.docs) await deleteDoc(d.ref);
+        for (const q of questions) {
+          const { id: _, ...qData } = q;
+          await addDoc(collection(db, 'quizSets', quizId, 'questions'), qData);
+        }
+        document.getElementById('save-status').textContent = '✓ Saved';
+        document.getElementById('host-card').style.display = questions.length > 0 ? 'block' : 'none';
+        document.getElementById('btn-host').href = `/game/host.html?quiz=${quizId}`;
+        toast('Quiz saved!', 'success');
+      } catch(e) { toast(e.message, 'error'); }
+      btn.disabled = false; btn.textContent = '💾 Save Quiz';
+    });
+
+    renderQuestions();
+  </script>
+</body>
+</html>

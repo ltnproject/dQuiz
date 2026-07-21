@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Quizzes — dQuiz</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+  <style>
+    .quiz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    .quiz-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: all 0.2s; display: flex; flex-direction: column; }
+    .quiz-card:hover { transform: translateY(-3px); box-shadow: 0 20px 50px rgba(108,92,231,0.2); }
+    .quiz-cover { height: 110px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; background: linear-gradient(135deg, rgba(108,92,231,0.4), rgba(0,210,255,0.2)); }
+    .quiz-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .quiz-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .quiz-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .quiz-actions { display: flex; gap: 8px; margin-top: auto; }
+    .search-bar { position: relative; max-width: 400px; }
+    .search-bar input { padding-left: 40px; }
+    .search-bar .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+    .empty-state { text-align: center; padding: 80px 24px; }
+    .empty-icon { font-size: 4rem; margin-bottom: 16px; }
+    .dropdown { position: relative; }
+    .dropdown-menu { position: absolute; right: 0; bottom: calc(100% + 8px); background: var(--bg-card2); border: 1px solid var(--border); border-radius: var(--radius-sm); min-width: 180px; overflow: hidden; z-index: 10; box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: none; }
+    .dropdown-menu.open { display: block; }
+    .dropdown-item { display: flex; align-items: center; gap: 10px; padding: 11px 16px; font-size: 0.875rem; cursor: pointer; transition: background 0.12s; color: var(--text); border: none; background: none; width: 100%; text-align: left; font-family: 'Inter', sans-serif; }
+    .dropdown-item:hover { background: rgba(255,255,255,0.05); }
+    .dropdown-item.danger { color: var(--danger); }
+    .dropdown-item.danger:hover { background: rgba(255,71,87,0.1); }
+  </style>
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+  <div id="navbar" class="navbar"></div>
+  <div class="page-content">
+    <div class="container section">
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:28px">
+        <div>
+          <h1 style="font-size:2rem;margin-bottom:4px">My Quizzes</h1>
+          <p style="color:var(--text-muted)" id="quiz-count">Loading…</p>
+        </div>
+        <a href="/quiz/create.html" class="btn btn-primary">＋ New Quiz</a>
+      </div>
+
+      <!-- Search + filter -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;align-items:center">
+        <div class="search-bar" style="flex:1;min-width:200px">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search" class="input-field" placeholder="Search quizzes…" />
+        </div>
+        <select id="filter-vis" class="input-field" style="width:auto;padding:12px 14px">
+          <option value="">All visibility</option>
+          <option value="public">Public</option>
+          <option value="private">Private</option>
+        </select>
+      </div>
+
+      <!-- Grid -->
+      <div class="quiz-grid" id="quiz-grid">
+        <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted)">
+          <div class="dots" style="justify-content:center"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/assets/js/firebase-init.js';
+    import { requireAuth, initNavbar, toast } from '/assets/js/utils.js';
+    import { collection, query, where, orderBy, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    initNavbar(auth, db, 'quizzes');
+    const user = await requireAuth(auth);
+
+    let allQuizzes = [];
+    let openDropdown = null;
+
+    async function loadQuizzes() {
+      const q = query(collection(db, 'quizSets'), where('creatorId','==',user.uid), orderBy('updatedAt','desc'));
+      const snap = await getDocs(q);
+      allQuizzes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderQuizzes();
+    }
+
+    function renderQuizzes() {
+      const search = document.getElementById('search').value.toLowerCase();
+      const vis = document.getElementById('filter-vis').value;
+      const filtered = allQuizzes.filter(q =>
+        (!search || q.title.toLowerCase().includes(search)) &&
+        (!vis || q.visibility === vis)
+      );
+      document.getElementById('quiz-count').textContent = `${allQuizzes.length} quiz${allQuizzes.length!==1?'zes':''}`;
+      const grid = document.getElementById('quiz-grid');
+
+      if (!filtered.length) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+          <div class="empty-icon">📝</div>
+          <h2 style="margin-bottom:8px">${search ? 'No results' : 'No quizzes yet'}</h2>
+          <p style="color:var(--text-muted);margin-bottom:20px">${search ? 'Try a different search term.' : 'Create your first quiz to get started.'}</p>
+          ${!search ? '<a href="/quiz/create.html" class="btn btn-primary">Create Quiz</a>' : ''}
+        </div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(q => `
+        <div class="quiz-card" data-id="${q.id}">
+          <div class="quiz-cover">${q.emoji||'📝'}</div>
+          <div class="quiz-body">
+            <div class="quiz-title" title="${q.title}">${q.title}</div>
+            ${q.description ? `<div style="font-size:0.8rem;color:var(--text-muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${q.description}</div>` : ''}
+            <div class="quiz-meta">
+              <span class="badge ${q.visibility==='public'?'badge-success':'badge-muted'}">${q.visibility==='public'?'🌐':'🔒'} ${q.visibility}</span>
+              <span class="text-xs text-muted">📋 ${q.questionCount||0} questions</span>
+              <span class="text-xs text-muted">▶ ${q.plays||0} plays</span>
+            </div>
+            <div class="quiz-actions">
+              <a href="/game/host.html?quiz=${q.id}" class="btn btn-primary btn-sm" style="flex:1">▶ Host</a>
+              <a href="/quiz/edit.html?id=${q.id}" class="btn btn-ghost btn-sm">✏️</a>
+              <div class="dropdown">
+                <button class="btn btn-ghost btn-sm dropdown-toggle" data-id="${q.id}">⋯</button>
+                <div class="dropdown-menu" id="drop-${q.id}">
+                  <button class="dropdown-item" data-action="visibility" data-id="${q.id}" data-vis="${q.visibility}">
+                    ${q.visibility==='public'?'🔒 Make Private':'🌐 Make Public'}
+                  </button>
+                  <button class="dropdown-item" data-action="duplicate" data-id="${q.id}">📋 Duplicate</button>
+                  <div style="height:1px;background:var(--border-subtle);margin:4px 0"></div>
+                  <button class="dropdown-item danger" data-action="delete" data-id="${q.id}">🗑 Delete</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // Dropdown toggles
+      document.querySelectorAll('.dropdown-toggle').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const menu = document.getElementById(`drop-${id}`);
+          if (openDropdown && openDropdown !== menu) openDropdown.classList.remove('open');
+          menu.classList.toggle('open');
+          openDropdown = menu.classList.contains('open') ? menu : null;
+        });
+      });
+
+      // Actions
+      document.querySelectorAll('.dropdown-item[data-action]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const { action, id } = btn.dataset;
+          openDropdown?.classList.remove('open');
+          openDropdown = null;
+
+          if (action === 'delete') {
+            if (!confirm('Delete this quiz? This cannot be undone.')) return;
+            await deleteDoc(doc(db, 'quizSets', id));
+            allQuizzes = allQuizzes.filter(q => q.id !== id);
+            renderQuizzes();
+            toast('Quiz deleted', 'success');
+          }
+
+          if (action === 'visibility') {
+            const current = btn.dataset.vis;
+            const next = current === 'public' ? 'private' : 'public';
+            await updateDoc(doc(db, 'quizSets', id), { visibility: next });
+            allQuizzes = allQuizzes.map(q => q.id === id ? { ...q, visibility: next } : q);
+            renderQuizzes();
+            toast(`Quiz made ${next}`, 'success');
+          }
+
+          if (action === 'duplicate') {
+            const original = allQuizzes.find(q => q.id === id);
+            if (!original) return;
+            const { id: _, ...rest } = original;
+            const ref = await addDoc(collection(db, 'quizSets'), {
+              ...rest, title: `${original.title} (copy)`,
+              plays: 0, likes: 0, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+            });
+            toast('Quiz duplicated!', 'success');
+            await loadQuizzes();
+          }
+        });
+      });
+    }
+
+    document.getElementById('search').addEventListener('input', renderQuizzes);
+    document.getElementById('filter-vis').addEventListener('change', renderQuizzes);
+    document.addEventListener('click', () => {
+      openDropdown?.classList.remove('open');
+      openDropdown = null;
+    });
+
+    await loadQuizzes();
+  </script>
+</body>
+</html>
