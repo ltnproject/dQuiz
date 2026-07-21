@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signing out — dQuiz</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;position:relative;z-index:1">
+    <div style="width:64px;height:64px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px">⚡</div>
+    <h2 style="font-family:'Space Grotesk',sans-serif">Signing you out…</h2>
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  </div>
+  <script type="module">
+    import { auth } from '/assets/js/firebase-init.js';
+    import { signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    try { await signOut(auth); } catch(e) {}
+    window.location.href = '/index.html';
+  </script>
+</body>
+</html>
