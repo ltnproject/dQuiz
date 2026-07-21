@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isGameHost(gameId) {
+      return get(/databases/$(database)/documents/games/$(gameId)).data.hostId == request.auth.uid;
+    }
+
+    // ── USERS ────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if isAuth();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /achievements/{aid} {
+        allow read: if isAuth();
+        allow write: if isOwner(uid) || isAdmin();
+      }
+
+      match /activity/{aid} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid);
+        allow update, delete: if false;
+      }
+    }
+
+    // ── QUIZ SETS ─────────────────────────────────────────────
+    match /quizSets/{quizId} {
+      allow read: if resource.data.visibility == 'public' || isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth() &&
+        (resource.data.creatorId == request.auth.uid || isAdmin());
+      allow delete: if isAuth() &&
+        (resource.data.creatorId == request.auth.uid || isAdmin());
+
+      match /questions/{qid} {
+        allow read: if isAuth();
+        allow write: if isAuth() &&
+          get(/databases/$(database)/documents/quizSets/$(quizId)).data.creatorId == request.auth.uid;
+      }
+    }
+
+    // ── GAMES ─────────────────────────────────────────────────
+    match /games/{gameId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth() &&
+        (resource.data.hostId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+
+      match /players/{playerId} {
+        allow read: if isAuth();
+        allow create: if isAuth();
+        allow update: if isAuth() && (
+          request.auth.uid == playerId ||
+          isGameHost(gameId) ||
+          isAdmin()
+        );
+        allow delete: if isGameHost(gameId) || isAdmin();
+      }
+    }
+  }
+}

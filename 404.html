@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 — dQuiz</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;position:relative;z-index:1">
+    <div>
+      <div style="font-size:6rem;margin-bottom:16px">⚡</div>
+      <h1 style="font-size:5rem;font-family:'Space Grotesk',sans-serif;font-weight:800;margin-bottom:8px" class="gradient-text">404</h1>
+      <h2 style="font-size:1.5rem;margin-bottom:12px">Page not found</h2>
+      <p style="color:var(--text-muted);margin-bottom:32px;max-width:400px">Looks like this question doesn't have an answer. Let's get you back to the game.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a href="/index.html" class="btn btn-ghost">← Home</a>
+        <a href="/dashboard.html" class="btn btn-primary">Dashboard</a>
+      </div>
+    </div>
+  </div>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@800&display=swap');
+    body { font-family: 'Inter', sans-serif; background: #08081A; color: #EEEEFF; }
+    .blob-wrap { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.18; }
+    .blob-1 { width: 600px; height: 600px; background: #6C5CE7; top: -200px; left: -200px; }
+    .blob-2 { width: 500px; height: 500px; background: #00D2FF; bottom: -200px; right: -200px; }
+    .gradient-text { background: linear-gradient(135deg,#A29BFE,#00D2FF); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .btn { display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;border:none;text-decoration:none;transition:all 0.18s; }
+    .btn-primary { background:linear-gradient(135deg,#6C5CE7,#5A4ED1);color:white;box-shadow:0 4px 20px rgba(108,92,231,0.4); }
+    .btn-ghost { background:rgba(255,255,255,0.04);color:#7777AA;border:1px solid rgba(255,255,255,0.06); }
+    .btn-ghost:hover { background:rgba(255,255,255,0.08);color:#EEEEFF; }
+  </style>
+</body>
+</html>

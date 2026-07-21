@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leaderboard — dQuiz</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+  <style>
+    .lb-hero { text-align: center; padding: 48px 0 36px; }
+    .lb-hero h1 { font-size: 2.4rem; margin-bottom: 8px; }
+    .lb-hero p { color: var(--text-muted); }
+    .top3-podium { display: flex; justify-content: center; align-items: flex-end; gap: 20px; margin: 40px 0 48px; }
+    .podium-player { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .podium-avatar { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; overflow: hidden; border: 3px solid transparent; }
+    .podium-avatar.gold { border-color: #FDCB6E; box-shadow: 0 0 20px rgba(253,203,110,0.4); }
+    .podium-avatar.silver { border-color: #A0AEC0; }
+    .podium-avatar.bronze { border-color: #C9874A; }
+    .podium-name { font-size: 0.85rem; font-weight: 700; }
+    .podium-score { font-size: 0.75rem; color: var(--text-muted); }
+    .podium-block { border-radius: 12px 12px 0 0; width: 80px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+    .my-rank-banner { background: linear-gradient(135deg, rgba(108,92,231,0.15), rgba(0,210,255,0.08)); border: 1px solid rgba(108,92,231,0.4); border-radius: var(--radius); padding: 16px 20px; display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+    .lb-table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .lb-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; height: 52px; margin-bottom: 4px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .update-note { text-align: center; font-size: 0.78rem; color: var(--text-muted); margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+  <div id="navbar" class="navbar"></div>
+  <div class="page-content">
+    <div class="container">
+
+      <div class="lb-hero">
+        <h1>🏆 Leaderboard</h1>
+        <p>The best players on the planet. Are you on the list?</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" style="max-width:400px;margin:0 auto 32px">
+        <button class="tab-btn active" data-tab="xp">⚡ XP</button>
+        <button class="tab-btn" data-tab="wins">🏆 Wins</button>
+        <button class="tab-btn" data-tab="played">🎮 Games</button>
+      </div>
+
+      <!-- Top 3 podium -->
+      <div class="top3-podium" id="podium"></div>
+
+      <!-- My rank banner -->
+      <div id="my-rank-banner" class="my-rank-banner" style="display:none">
+        <div style="font-size:1.5rem;font-weight:800;color:#A29BFE;min-width:36px" id="my-rank-num">#—</div>
+        <div style="flex:1">
+          <div style="font-weight:700" id="my-rank-name">You</div>
+          <div style="font-size:0.8rem;color:var(--text-muted)" id="my-rank-sub">—</div>
+        </div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.3rem;color:#A29BFE" id="my-rank-val">—</div>
+      </div>
+
+      <!-- Full table -->
+      <div class="lb-table-wrap">
+        <div class="lb-header">
+          <span style="font-family:'Space Grotesk',sans-serif;font-weight:700">Top Players</span>
+          <span style="font-size:0.8rem;color:var(--text-muted)" id="lb-label">Ranked by XP</span>
+        </div>
+        <div id="lb-list">
+          ${Array(10).fill(0).map(() => `<div class="skeleton" style="margin:6px 16px;height:52px"></div>`).join('')}
+        </div>
+      </div>
+
+      <div class="update-note">Rankings update in real time · Only registered players are ranked</div>
+
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/assets/js/firebase-init.js';
+    import { initNavbar } from '/assets/js/utils.js';
+    import { collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    initNavbar(auth, db, 'leaderboard');
+
+    let currentTab = 'xp';
+    let currentUser = null;
+    auth.onAuthStateChanged(u => { currentUser = u; });
+
+    const tabLabels = { xp: 'Ranked by XP', wins: 'Ranked by Wins', played: 'Ranked by Games Played' };
+    const tabFields = { xp: 'xp', wins: 'wins', played: 'gamesPlayed' };
+    const tabUnits = { xp: 'XP', wins: 'wins', played: 'games' };
+
+    async function loadLeaderboard(tab) {
+      const field = tabFields[tab];
+      document.getElementById('lb-label').textContent = tabLabels[tab];
+
+      const q = query(collection(db, 'users'), orderBy(field, 'desc'), limit(50));
+      const snap = await getDocs(q);
+      const players = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      renderPodium(players.slice(0, 3), field);
+      renderList(players, field, tab);
+
+      // My rank
+      if (currentUser) {
+        const myIdx = players.findIndex(p => p.id === currentUser.uid);
+        if (myIdx >= 0) {
+          const me = players[myIdx];
+          document.getElementById('my-rank-banner').style.display = 'flex';
+          document.getElementById('my-rank-num').textContent = `#${myIdx + 1}`;
+          document.getElementById('my-rank-name').textContent = me.username || 'You';
+          document.getElementById('my-rank-sub').textContent = `Level ${me.level || 1}`;
+          const val = me[field] || 0;
+          document.getElementById('my-rank-val').textContent = `${val.toLocaleString()} ${tabUnits[tab]}`;
+        }
+      }
+    }
+
+    function renderPodium(top3, field) {
+      if (!top3.length) return;
+      // Order: 2nd, 1st, 3rd
+      const order = [top3[1], top3[0], top3[2]].filter(Boolean);
+      const heights = [130, 165, 100];
+      const classes = ['silver', 'gold', 'bronze'];
+      const emojis = ['🥈', '🥇', '🥉'];
+      const gradients = [
+        'linear-gradient(180deg,rgba(160,174,192,0.3),rgba(160,174,192,0.05))',
+        'linear-gradient(180deg,rgba(253,203,110,0.35),rgba(253,203,110,0.05))',
+        'linear-gradient(180deg,rgba(201,135,74,0.3),rgba(201,135,74,0.05))',
+      ];
+
+      document.getElementById('podium').innerHTML = order.map((p, i) => {
+        const isMe = currentUser && p.id === currentUser.uid;
+        const avatar = p.photoURL
+          ? `<img src="${p.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover">`
+          : (p.username || '?')[0].toUpperCase();
+        return `
+          <div class="podium-player">
+            <div class="podium-avatar ${classes[i]}" style="background:linear-gradient(135deg,var(--primary),var(--accent))">${avatar}</div>
+            <div class="podium-name">${p.username || 'Player'}${isMe ? ' 👈' : ''}</div>
+            <div class="podium-score">${(p[field] || 0).toLocaleString()} ${tabUnits[currentTab]}</div>
+            <div class="podium-block" style="height:${heights[i]}px;background:${gradients[i]};border:1px solid rgba(255,255,255,0.08)">${emojis[i]}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderList(players, field, tab) {
+      const list = document.getElementById('lb-list');
+      const rankColors = ['#FDCB6E', '#A0AEC0', '#C9874A'];
+
+      list.innerHTML = players.map((p, i) => {
+        const isMe = currentUser && p.id === currentUser.uid;
+        const avatar = p.photoURL
+          ? `<img src="${p.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover">`
+          : (p.username || '?')[0].toUpperCase();
+        const val = (p[field] || 0).toLocaleString();
+        return `
+          <div class="lb-row" style="${isMe ? 'background:rgba(108,92,231,0.1);' : ''}">
+            <div class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}"
+              style="color:${i < 3 ? rankColors[i] : 'var(--text-muted)'}">
+              ${i < 3 ? ['🥇','🥈','🥉'][i] : i + 1}
+            </div>
+            <div class="lb-avatar" style="background:linear-gradient(135deg,var(--primary),var(--accent))">${avatar}</div>
+            <div style="flex:1;min-width:0">
+              <div class="lb-name">${p.username || 'Player'}${isMe ? ' <span style="color:#A29BFE;font-size:0.75rem">(you)</span>' : ''}</div>
+              <div class="lb-sub">Lv ${p.level || 1} · ${p.gamesPlayed || 0} games</div>
+            </div>
+            <div>
+              <div class="lb-score" style="color:#A29BFE">${val}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);text-align:right">${tabUnits[tab]}</div>
+            </div>
+          </div>`;
+      }).join('') || '<div style="padding:32px;text-align:center;color:var(--text-muted)">No players yet.</div>';
+    }
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTab = btn.dataset.tab;
+        document.getElementById('lb-list').innerHTML = Array(10).fill(0).map(() =>
+          `<div class="skeleton" style="margin:6px 16px;height:52px"></div>`).join('');
+        document.getElementById('podium').innerHTML = '';
+        loadLeaderboard(currentTab);
+      });
+    });
+
+    await loadLeaderboard('xp');
+  </script>
+</body>
+</html>

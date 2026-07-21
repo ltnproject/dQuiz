@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>dQuiz — Live Quiz Battles</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+  <style>
+    .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px 24px 60px; position: relative; z-index: 1; }
+    .hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 7px 18px; border-radius: 40px; background: rgba(108,92,231,0.12); border: 1px solid rgba(108,92,231,0.3); font-size: 0.85rem; font-weight: 600; color: #A29BFE; margin-bottom: 28px; }
+    .hero h1 { font-size: clamp(3rem, 8vw, 6rem); font-weight: 800; line-height: 1.05; margin-bottom: 24px; }
+    .hero p { font-size: 1.2rem; color: var(--text-muted); max-width: 560px; margin-bottom: 40px; }
+    .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .hero-badges { display: flex; gap: 32px; margin-top: 72px; flex-wrap: wrap; justify-content: center; }
+    .hero-badge { text-align: center; }
+    .hero-badge-num { font-family: 'Space Grotesk', sans-serif; font-size: 2.2rem; font-weight: 800; background: linear-gradient(135deg, #A29BFE, #00D2FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-badge-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+    .features { padding: 80px 0; }
+    .features h2 { text-align: center; font-size: 2.5rem; margin-bottom: 12px; }
+    .features-sub { text-align: center; color: var(--text-muted); margin-bottom: 56px; }
+    .feature-icon { font-size: 1.8rem; margin-bottom: 14px; }
+    .feature-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.05rem; margin-bottom: 8px; }
+    .feature-desc { font-size: 0.875rem; color: var(--text-muted); line-height: 1.65; }
+    .how-it-works { padding: 80px 0; }
+    .step { display: flex; gap: 24px; align-items: flex-start; }
+    .step-num { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; flex-shrink: 0; }
+    .step-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; margin-bottom: 6px; }
+    .step-desc { font-size: 0.875rem; color: var(--text-muted); }
+    .cta-section { padding: 80px 24px; text-align: center; }
+    .cta-box { background: linear-gradient(135deg, rgba(108,92,231,0.15), rgba(0,210,255,0.08)); border: 1px solid rgba(108,92,231,0.35); border-radius: 24px; padding: 60px 40px; max-width: 640px; margin: 0 auto; }
+    .top-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 18px 32px; background: rgba(8,8,26,0.8); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+    .top-nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .top-nav-logo { width: 38px; height: 38px; background: linear-gradient(135deg, var(--primary), var(--accent)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .top-nav-title { font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 1.4rem; }
+    footer { padding: 32px; text-align: center; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+
+  <nav class="top-nav">
+    <a href="/index.html" class="top-nav-brand">
+      <div class="top-nav-logo">⚡</div>
+      <span class="top-nav-title gradient-text">dQuiz</span>
+    </a>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a href="/auth/login.html" class="btn btn-ghost btn-sm">Sign In</a>
+      <a href="/auth/signup.html" class="btn btn-primary btn-sm">Get Started</a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-eyebrow">⚡ Real-time multiplayer quizzes</div>
+      <h1>Quiz battles<br><span class="gradient-text">that hit different</span></h1>
+      <p>Create quizzes, host live games, earn XP, and compete on global leaderboards. Free forever.</p>
+      <div class="hero-cta">
+        <a href="/auth/signup.html" class="btn btn-primary btn-lg">Start Playing Free →</a>
+        <a href="/game/join.html" class="btn btn-ghost btn-lg">Join a Game</a>
+      </div>
+      <div class="hero-badges">
+        <div class="hero-badge"><div class="hero-badge-num">10K+</div><div class="hero-badge-label">Active Players</div></div>
+        <div class="hero-badge"><div class="hero-badge-num">50K+</div><div class="hero-badge-label">Quizzes Created</div></div>
+        <div class="hero-badge"><div class="hero-badge-num">200K+</div><div class="hero-badge-label">Games Played</div></div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features">
+      <div class="container">
+        <h2>Everything for <span class="gradient-text">epic games</span></h2>
+        <p class="features-sub">Built for teachers, friends, and anyone who loves a good challenge.</p>
+        <div class="grid-3">
+          <div class="card">
+            <div class="feature-icon">🎮</div>
+            <div class="feature-title">Live Multiplayer</div>
+            <div class="feature-desc">Host a game with a 6-digit code. Players join from any device and answers update in real time via Firestore listeners — zero polling.</div>
+          </div>
+          <div class="card">
+            <div class="feature-icon">⚡</div>
+            <div class="feature-title">XP &amp; Levels</div>
+            <div class="feature-desc">Earn XP for wins, streaks, hosting, and daily play. Level up automatically and show off your rank on the global leaderboard.</div>
+          </div>
+          <div class="card">
+            <div class="feature-icon">🎯</div>
+            <div class="feature-title">Smart Scoring</div>
+            <div class="feature-desc">Points reward correct answers, fast responses, and consecutive streaks. Every second counts — answer quickly to maximise your score.</div>
+          </div>
+          <div class="card">
+            <div class="feature-icon">✏️</div>
+            <div class="feature-title">Quiz Builder</div>
+            <div class="feature-desc">Create quizzes with images, custom timers, and multiple-choice questions. Publish publicly or keep them private.</div>
+          </div>
+          <div class="card">
+            <div class="feature-icon">🏆</div>
+            <div class="feature-title">Achievements</div>
+            <div class="feature-desc">Unlock badges: First Win, Speed Demon, On Fire, Veteran, and more. Each achievement logs to your profile permanently.</div>
+          </div>
+          <div class="card">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">Live Stats</div>
+            <div class="feature-desc">Hosts see answer breakdowns per question in real time. Players see a live leaderboard between every question.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="how-it-works">
+      <div class="container">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center">
+          <div>
+            <h2 style="font-size:2.2rem;margin-bottom:12px">Up and running<br><span class="gradient-text">in 30 seconds</span></h2>
+            <p style="color:var(--text-muted);margin-bottom:36px">No app to download. Works on any browser, any device.</p>
+            <div style="display:flex;flex-direction:column;gap:24px">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div><div class="step-title">Create or pick a quiz</div><div class="step-desc">Build your own or browse thousands of public quizzes already on the platform.</div></div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div><div class="step-title">Share the 6-digit code</div><div class="step-desc">Players go to dquiz.app/game/join and type the code — they're in the lobby instantly.</div></div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div><div class="step-title">Start the game</div><div class="step-desc">Hit Start, questions roll out, scores update live, and the podium reveals the winner.</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="background:linear-gradient(135deg,rgba(108,92,231,0.15),rgba(0,210,255,0.08));border-color:rgba(108,92,231,0.35);padding:40px;text-align:center">
+            <div style="font-size:5rem;margin-bottom:16px">🎉</div>
+            <div class="game-code-display" style="font-size:3rem;letter-spacing:8px">847291</div>
+            <div style="color:var(--text-muted);margin-top:12px;font-size:0.9rem">Players waiting: 24</div>
+            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:20px">
+              <div class="player-chip"><div class="navbar-avatar" style="width:28px;height:28px;font-size:0.75rem">A</div><span style="font-size:0.85rem">Alice</span></div>
+              <div class="player-chip"><div class="navbar-avatar" style="width:28px;height:28px;font-size:0.75rem">B</div><span style="font-size:0.85rem">Bob</span></div>
+              <div class="player-chip"><div class="navbar-avatar" style="width:28px;height:28px;font-size:0.75rem">C</div><span style="font-size:0.85rem">Charlie</span></div>
+              <div class="player-chip"><div class="navbar-avatar" style="width:28px;height:28px;font-size:0.75rem">+</div><span style="font-size:0.85rem">21 more</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+      <div class="cta-box">
+        <div style="font-size:3rem;margin-bottom:16px">🚀</div>
+        <h2 style="font-size:2.2rem;margin-bottom:12px">Ready to play?</h2>
+        <p style="color:var(--text-muted);margin-bottom:28px">Join thousands of players competing in live quiz battles right now. Free, no download required.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <a href="/auth/signup.html" class="btn btn-primary btn-lg">Create Free Account</a>
+          <a href="/game/join.html" class="btn btn-ghost btn-lg">Join with Code</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div>© 2025 dQuiz · <a href="/auth/login.html" style="color:var(--text-muted)">Sign In</a> · <a href="/auth/signup.html" style="color:var(--text-muted)">Sign Up</a> · <a href="/leaderboard.html" style="color:var(--text-muted)">Leaderboard</a></div>
+  </footer>
+
+  <script type="module">
+    import { auth } from '/assets/js/firebase-init.js';
+    import { redirectIfAuthed } from '/assets/js/utils.js';
+    redirectIfAuthed(auth, '/dashboard.html');
+  </script>
+</body>
+</html>

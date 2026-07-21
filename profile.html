@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile — dQuiz</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+  <style>
+    .profile-hero { display: flex; align-items: flex-end; gap: 24px; padding: 40px 0 28px; flex-wrap: wrap; }
+    .profile-avatar-lg { width: 100px; height: 100px; border-radius: 24px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 2.8rem; font-weight: 800; overflow: hidden; border: 3px solid rgba(108,92,231,0.4); box-shadow: 0 0 40px rgba(108,92,231,0.3); flex-shrink: 0; }
+    .profile-avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-meta { flex: 1; }
+    .profile-meta h1 { font-size: 2rem; margin-bottom: 4px; }
+    .profile-meta .role-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #A29BFE; margin-bottom: 8px; }
+    .profile-meta .joined { font-size: 0.8rem; color: var(--text-muted); }
+    .profile-actions { display: flex; gap: 10px; margin-left: auto; }
+    .stat-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 32px; }
+    .achievement-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+    .achievement-card { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); background: rgba(255,255,255,0.02); transition: all 0.15s; }
+    .achievement-card.unlocked { border-color: rgba(108,92,231,0.3); background: rgba(108,92,231,0.06); }
+    .achievement-card.unlocked:hover { background: rgba(108,92,231,0.1); }
+    .achievement-card.locked { opacity: 0.4; filter: grayscale(0.8); }
+    .achievement-icon { font-size: 2rem; width: 48px; text-align: center; flex-shrink: 0; }
+    .achievement-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; }
+    .achievement-desc { font-size: 0.75rem; color: var(--text-muted); }
+    .achievement-date { font-size: 0.7rem; color: #A29BFE; margin-top: 2px; }
+    .edit-field { display: flex; align-items: center; gap: 10px; }
+    .edit-field input { flex: 1; }
+    @media(max-width:700px) { .stat-row { grid-template-columns: repeat(3,1fr); } }
+    @media(max-width:480px) { .stat-row { grid-template-columns: repeat(2,1fr); } .profile-hero { flex-direction: column; align-items: flex-start; } }
+  </style>
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+  <div id="navbar" class="navbar"></div>
+  <div class="page-content">
+    <div class="container">
+
+      <!-- Profile hero -->
+      <div class="profile-hero">
+        <div class="profile-avatar-lg" id="profile-avatar">?</div>
+        <div class="profile-meta">
+          <h1 id="profile-username">Loading…</h1>
+          <div class="role-badge">⭐ Level <span id="profile-level">1</span> Player</div>
+          <div class="joined" id="profile-joined"></div>
+          <div style="margin-top:12px;max-width:300px">
+            <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-muted);margin-bottom:5px">
+              <span>XP Progress</span><span id="xp-label">0 / 500</span>
+            </div>
+            <div class="xp-bar-track"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="profile-actions">
+          <button class="btn btn-secondary" id="btn-edit-profile">✏️ Edit Profile</button>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="stat-row">
+        <div class="stat-chip">
+          <div class="stat-value gradient-text" id="stat-xp">0</div>
+          <div class="stat-label">Total XP</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-value" style="color:#00D2FF" id="stat-level">1</div>
+          <div class="stat-label">Level</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-value" style="color:#00B894" id="stat-wins">0</div>
+          <div class="stat-label">Wins</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-value" style="color:#FDCB6E" id="stat-played">0</div>
+          <div class="stat-label">Games Played</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-value" style="color:#A29BFE" id="stat-hosted">0</div>
+          <div class="stat-label">Games Hosted</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" style="max-width:360px;margin-bottom:28px">
+        <button class="tab-btn active" data-tab="achievements">🏅 Achievements</button>
+        <button class="tab-btn" data-tab="quizzes">📝 My Quizzes</button>
+      </div>
+
+      <!-- Achievements tab -->
+      <div id="tab-achievements">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <h2 style="font-size:1.1rem">Achievements <span id="achiev-count" style="color:var(--text-muted);font-weight:400;font-size:0.9rem"></span></h2>
+        </div>
+        <div class="achievement-grid" id="achievement-grid">
+          <div style="color:var(--text-muted);font-size:0.875rem">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Quizzes tab -->
+      <div id="tab-quizzes" style="display:none">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px" id="profile-quizzes">
+          <div style="color:var(--text-muted)">Loading…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Edit profile modal -->
+  <div class="modal-overlay hidden" id="edit-modal">
+    <div class="modal">
+      <h2 style="font-size:1.3rem;margin-bottom:20px">Edit Profile</h2>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="input-wrap">
+          <label class="input-label">Username</label>
+          <input type="text" id="edit-username" class="input-field" maxlength="20" />
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+          <button class="btn btn-ghost" id="btn-cancel-edit">Cancel</button>
+          <button class="btn btn-primary" id="btn-save-edit">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/assets/js/firebase-init.js';
+    import { requireAuth, initNavbar, ACHIEVEMENTS, xpProgress, toast, timeAgo, openModal, closeModal } from '/assets/js/utils.js';
+    import {
+      doc, getDoc, getDocs, collection, query, where, orderBy, limit, updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    initNavbar(auth, db, '');
+    const user = await requireAuth(auth);
+
+    // Load profile
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    const profile = snap.data();
+
+    // Render hero
+    const av = document.getElementById('profile-avatar');
+    if (profile.photoURL) av.innerHTML = `<img src="${profile.photoURL}" alt="">`;
+    else av.textContent = (profile.username || '?')[0].toUpperCase();
+    document.getElementById('profile-username').textContent = profile.username || 'Player';
+    document.getElementById('profile-level').textContent = profile.level || 1;
+    document.getElementById('profile-joined').textContent = `Joined ${timeAgo(profile.createdAt)}`;
+
+    // Stats
+    document.getElementById('stat-xp').textContent = (profile.xp || 0).toLocaleString();
+    document.getElementById('stat-level').textContent = profile.level || 1;
+    document.getElementById('stat-wins').textContent = profile.wins || 0;
+    document.getElementById('stat-played').textContent = profile.gamesPlayed || 0;
+    document.getElementById('stat-hosted').textContent = profile.gamesHosted || 0;
+
+    // XP bar
+    const pct = xpProgress(profile.xp || 0, profile.level || 1);
+    document.getElementById('xp-bar').style.width = pct + '%';
+    const inLevel = (profile.xp || 0) % 500;
+    document.getElementById('xp-label').textContent = `${inLevel} / 500 XP`;
+
+    // Achievements
+    const achievSnap = await getDocs(collection(db, 'users', user.uid, 'achievements'));
+    const earned = new Map(achievSnap.docs.map(d => [d.id, d.data()]));
+    document.getElementById('achiev-count').textContent = `(${earned.size} / ${ACHIEVEMENTS.length})`;
+
+    document.getElementById('achievement-grid').innerHTML = ACHIEVEMENTS.map(a => {
+      const data = earned.get(a.id);
+      const unlocked = !!data;
+      const date = data?.unlockedAt ? timeAgo(data.unlockedAt) : null;
+      return `
+        <div class="achievement-card ${unlocked ? 'unlocked' : 'locked'}">
+          <div class="achievement-icon">${a.icon}</div>
+          <div>
+            <div class="achievement-title">${a.title}</div>
+            <div class="achievement-desc">${a.desc}</div>
+            ${unlocked && date ? `<div class="achievement-date">Unlocked ${date}</div>` : ''}
+            ${!unlocked ? `<div class="achievement-date" style="color:var(--text-muted)">Locked</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    // Quizzes tab
+    const qSnap = await getDocs(query(collection(db, 'quizSets'), where('creatorId', '==', user.uid), orderBy('updatedAt', 'desc'), limit(20)));
+    const quizzes = qSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    document.getElementById('profile-quizzes').innerHTML = quizzes.length
+      ? quizzes.map(q => `
+          <div class="card" style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:1.5rem">${q.emoji || '📝'}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:0.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${q.title}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">${q.questionCount || 0}q · ${q.plays || 0} plays</div>
+              </div>
+              <span class="badge ${q.visibility === 'public' ? 'badge-success' : 'badge-muted'}">${q.visibility}</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <a href="/quiz/edit.html?id=${q.id}" class="btn btn-ghost btn-sm" style="flex:1">✏️ Edit</a>
+              <a href="/game/host.html?quiz=${q.id}" class="btn btn-primary btn-sm" style="flex:1">▶ Host</a>
+            </div>
+          </div>`)
+        .join('')
+      : `<div style="color:var(--text-muted);text-align:center;padding:40px">
+          No quizzes yet. <a href="/quiz/create.html" style="color:#A29BFE">Create one →</a>
+        </div>`;
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-achievements').style.display = btn.dataset.tab === 'achievements' ? 'block' : 'none';
+        document.getElementById('tab-quizzes').style.display = btn.dataset.tab === 'quizzes' ? 'block' : 'none';
+      });
+    });
+
+    // Edit profile
+    document.getElementById('btn-edit-profile').addEventListener('click', () => {
+      document.getElementById('edit-username').value = profile.username || '';
+      openModal('edit-modal');
+    });
+    document.getElementById('btn-cancel-edit').addEventListener('click', () => closeModal('edit-modal'));
+    document.getElementById('btn-save-edit').addEventListener('click', async () => {
+      const newName = document.getElementById('edit-username').value.trim();
+      if (!newName || newName.length < 2) { toast('Username must be at least 2 characters', 'error'); return; }
+      await updateDoc(doc(db, 'users', user.uid), { username: newName });
+      document.getElementById('profile-username').textContent = newName;
+      closeModal('edit-modal');
+      toast('Profile updated!', 'success');
+    });
+  </script>
+</body>
+</html>

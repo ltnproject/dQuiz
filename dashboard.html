@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — dQuiz</title>
+  <link rel="stylesheet" href="/assets/css/main.css" />
+  <style>
+    .welcome-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 32px; }
+    .welcome-text h1 { font-size: 2rem; margin-bottom: 4px; }
+    .welcome-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .profile-card { display: flex; align-items: center; gap: 20px; }
+    .profile-avatar { width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 800; overflow: hidden; flex-shrink: 0; }
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-info h2 { font-size: 1.3rem; margin-bottom: 4px; }
+    .profile-role { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; color: #A29BFE; }
+    .quick-action { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); text-decoration: none; color: inherit; transition: all 0.18s; }
+    .quick-action:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(108,92,231,0.2); }
+    .quick-action-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+    .quick-action-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; margin-bottom: 2px; }
+    .quick-action-sub { font-size: 0.8rem; color: var(--text-muted); }
+    .recent-quiz { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border-subtle); text-decoration: none; color: inherit; transition: background 0.15s; }
+    .recent-quiz:last-child { border-bottom: none; }
+    .recent-quiz:hover { background: rgba(255,255,255,0.02); }
+    .rq-icon { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--primary), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; opacity: 0.7; }
+    .rq-info { flex: 1; min-width: 0; }
+    .rq-title { font-weight: 600; font-size: 0.9rem; truncate; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rq-meta { font-size: 0.75rem; color: var(--text-muted); }
+    .achievement-chip { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); }
+    .achievement-chip .icon { font-size: 1.4rem; }
+    .achievement-chip .title { font-size: 0.8rem; font-weight: 600; }
+    .achievement-chip .desc { font-size: 0.7rem; color: var(--text-muted); }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .section-header h2 { font-size: 1.2rem; }
+    .section-header a { font-size: 0.85rem; color: #A29BFE; text-decoration: none; }
+    .section-header a:hover { color: white; }
+  </style>
+</head>
+<body>
+  <div class="blob-wrap"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+  <div id="navbar" class="navbar"></div>
+  <div class="page-content">
+    <div class="container section">
+
+      <!-- Welcome -->
+      <div class="welcome-bar">
+        <div class="welcome-text">
+          <h1>Hey, <span class="gradient-text" id="welcome-name">Player</span> 👋</h1>
+          <p style="color:var(--text-muted)">Ready to crush some quizzes today?</p>
+        </div>
+        <div class="welcome-actions">
+          <a href="/game/join.html" class="btn btn-ghost">▶ Join Game</a>
+          <a href="/quiz/create.html" class="btn btn-primary">＋ Create Quiz</a>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start">
+
+        <!-- Left column: profile + achievements -->
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <!-- Profile card -->
+          <div class="card">
+            <div class="profile-card">
+              <div class="profile-avatar" id="profile-avatar">?</div>
+              <div class="profile-info">
+                <h2 id="profile-name">—</h2>
+                <div class="profile-role">⭐ Level <span id="profile-level">1</span> Player</div>
+              </div>
+            </div>
+            <div style="margin-top:20px">
+              <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-muted);margin-bottom:6px">
+                <span>XP Progress</span>
+                <span><span id="xp-current">0</span> / <span id="xp-next">500</span></span>
+              </div>
+              <div class="xp-bar-track"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div>
+            </div>
+            <div class="separator"></div>
+            <div class="grid-2" style="gap:12px">
+              <div style="text-align:center">
+                <div style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.5rem;color:#A29BFE" id="stat-xp">0</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">Total XP</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.5rem;color:#00D2FF" id="stat-played">0</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">Games Played</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.5rem;color:#00B894" id="stat-wins">0</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">Wins</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.5rem;color:#FDCB6E" id="stat-hosted">0</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">Hosted</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Achievements -->
+          <div class="card">
+            <div class="section-header">
+              <h2>Achievements</h2>
+              <a href="/profile.html">View all</a>
+            </div>
+            <div id="achievements-list" style="display:flex;flex-direction:column;gap:8px">
+              <p style="color:var(--text-muted);font-size:0.85rem">Play games to unlock achievements!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div style="display:flex;flex-direction:column;gap:20px">
+
+          <!-- Quick actions -->
+          <div class="grid-2">
+            <a href="/game/join.html" class="quick-action" style="background:linear-gradient(135deg,rgba(108,92,231,0.15),rgba(0,210,255,0.08));border-color:rgba(108,92,231,0.35)">
+              <div class="quick-action-icon" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark))">▶</div>
+              <div>
+                <div class="quick-action-title">Join a Game</div>
+                <div class="quick-action-sub">Enter a 6-digit code</div>
+              </div>
+            </a>
+            <a href="/quiz/my-quizzes.html" class="quick-action" style="background:linear-gradient(135deg,rgba(0,184,148,0.15),rgba(0,210,255,0.08));border-color:rgba(0,184,148,0.35)">
+              <div class="quick-action-icon" style="background:linear-gradient(135deg,#00B894,#00A381)">🎮</div>
+              <div>
+                <div class="quick-action-title">Host a Game</div>
+                <div class="quick-action-sub">Pick a quiz & start</div>
+              </div>
+            </a>
+            <a href="/quiz/create.html" class="quick-action" style="background:linear-gradient(135deg,rgba(253,203,110,0.12),transparent);border-color:rgba(253,203,110,0.3)">
+              <div class="quick-action-icon" style="background:linear-gradient(135deg,#FDCB6E,#e0a800)">✏️</div>
+              <div>
+                <div class="quick-action-title">Create Quiz</div>
+                <div class="quick-action-sub">Build your own</div>
+              </div>
+            </a>
+            <a href="/discover.html" class="quick-action" style="background:linear-gradient(135deg,rgba(255,71,87,0.12),transparent);border-color:rgba(255,71,87,0.3)">
+              <div class="quick-action-icon" style="background:linear-gradient(135deg,#FF4757,#FF2336)">🔍</div>
+              <div>
+                <div class="quick-action-title">Discover</div>
+                <div class="quick-action-sub">Browse public quizzes</div>
+              </div>
+            </a>
+          </div>
+
+          <!-- Recent quizzes -->
+          <div class="card">
+            <div class="section-header">
+              <h2>My Quizzes</h2>
+              <a href="/quiz/my-quizzes.html">View all →</a>
+            </div>
+            <div id="recent-quizzes">
+              <p style="color:var(--text-muted);font-size:0.875rem;padding:8px 0">No quizzes yet. <a href="/quiz/create.html" style="color:#A29BFE">Create one →</a></p>
+            </div>
+          </div>
+
+          <!-- Leaderboard preview -->
+          <div class="card">
+            <div class="section-header">
+              <h2>🏆 Top Players</h2>
+              <a href="/leaderboard.html">Full leaderboard →</a>
+            </div>
+            <div id="lb-preview"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from '/assets/js/firebase-init.js';
+    import { requireAuth, initNavbar, xpProgress, ACHIEVEMENTS } from '/assets/js/utils.js';
+    import { doc, getDoc, collection, getDocs, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    initNavbar(auth, db, 'dashboard');
+
+    const user = await requireAuth(auth);
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    const profile = snap.data();
+
+    // Fill profile
+    document.getElementById('welcome-name').textContent = profile.username;
+    document.getElementById('profile-name').textContent = profile.username;
+    document.getElementById('profile-level').textContent = profile.level;
+    const av = document.getElementById('profile-avatar');
+    if (profile.photoURL) { av.innerHTML = `<img src="${profile.photoURL}" alt="">`; }
+    else { av.textContent = profile.username[0].toUpperCase(); }
+    document.getElementById('stat-xp').textContent = (profile.xp||0).toLocaleString();
+    document.getElementById('stat-played').textContent = profile.gamesPlayed||0;
+    document.getElementById('stat-wins').textContent = profile.wins||0;
+    document.getElementById('stat-hosted').textContent = profile.gamesHosted||0;
+
+    // XP bar
+    const pct = xpProgress(profile.xp||0, profile.level||1);
+    document.getElementById('xp-bar').style.width = pct + '%';
+    document.getElementById('xp-current').textContent = (profile.xp||0) % 500;
+    document.getElementById('xp-next').textContent = 500;
+    document.getElementById('profile-level').textContent = profile.level||1;
+
+    // Achievements
+    const achievSnap = await getDocs(collection(db, 'users', user.uid, 'achievements'));
+    const earnedIds = achievSnap.docs.map(d => d.id);
+    const earned = ACHIEVEMENTS.filter(a => earnedIds.includes(a.id));
+    const achEl = document.getElementById('achievements-list');
+    if (earned.length) {
+      achEl.innerHTML = earned.slice(0,4).map(a => `
+        <div class="achievement-chip">
+          <div class="icon">${a.icon}</div>
+          <div><div class="title">${a.title}</div><div class="desc">${a.desc}</div></div>
+        </div>
+      `).join('');
+    }
+
+    // Recent quizzes
+    const qSnap = await getDocs(query(collection(db, 'quizSets'), where('creatorId','==',user.uid), orderBy('updatedAt','desc'), limit(5)));
+    const rqEl = document.getElementById('recent-quizzes');
+    if (!qSnap.empty) {
+      rqEl.innerHTML = qSnap.docs.map(d => {
+        const q = d.data();
+        return `<a class="recent-quiz" href="/quiz/edit.html?id=${d.id}">
+          <div class="rq-icon">📝</div>
+          <div class="rq-info">
+            <div class="rq-title">${q.title}</div>
+            <div class="rq-meta">${q.questionCount||0} questions · ${q.visibility}</div>
+          </div>
+          <a href="/game/host.html?quiz=${d.id}" class="btn btn-sm btn-primary" onclick="event.stopPropagation()">Host</a>
+        </a>`;
+      }).join('');
+    }
+
+    // Leaderboard preview
+    const lbSnap = await getDocs(query(collection(db, 'users'), orderBy('xp','desc'), limit(5)));
+    const lbEl = document.getElementById('lb-preview');
+    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+    lbEl.innerHTML = lbSnap.docs.map((d,i) => {
+      const p = d.data();
+      const isMe = d.id === user.uid;
+      return `<div class="lb-row" style="${isMe?'background:rgba(108,92,231,0.1);border-radius:10px':''}">
+        <div class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${medals[i]}</div>
+        <div class="lb-avatar">${p.photoURL?`<img src="${p.photoURL}" alt="">`:(p.username||'?')[0].toUpperCase()}</div>
+        <div><div class="lb-name">${p.username||'Player'}${isMe?' (you)':''}</div><div class="lb-sub">Lv ${p.level||1}</div></div>
+        <div class="lb-score" style="color:#A29BFE">${(p.xp||0).toLocaleString()} XP</div>
+      </div>`;
+    }).join('');
+  </script>
+</body>
+</html>
